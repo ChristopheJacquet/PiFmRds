@@ -4,11 +4,4 @@
    Released under the GNU GPL v3 license.
 */
 
-extern float symbol_000[];
-extern float symbol_001[];
-extern float symbol_010[];
-extern float symbol_011[];
-extern float symbol_100[];
-extern float symbol_101[];
-extern float symbol_110[];
-extern float symbol_111[];
+extern float *symbol_samples[2][2][2];

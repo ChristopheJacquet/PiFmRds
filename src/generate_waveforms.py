@@ -46,13 +46,16 @@ def generate_bit_in_context(prev, current, next):
         name = name,
         values = u", ".join(map(format_number, out))))
     
-    outh.write(u"extern float symbol_{name}[];\n".format(name=name))
+    #outh.write(u"extern float symbol_{name}[];\n".format(name=name))
 
 
 for prev in [0, 1]:
     for current in [0, 1]:
         for next in [0, 1]:
             generate_bit_in_context(prev, current, next)
+
+outc.write(u"float *symbol_samples[2][2][2] = {{{symbol_000, symbol_001}, {symbol_010, symbol_011}}, {{symbol_100, symbol_101}, {symbol_110, symbol_111}}};\n")
+outh.write(u"extern float *symbol_samples[2][2][2];\n")
 
 outc.close()
 outh.close()
