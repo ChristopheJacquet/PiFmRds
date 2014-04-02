@@ -4,4 +4,5 @@
    Released under the GNU GPL v3 license.
 */
 
-extern float *symbol_samples[2][2][2];
+extern float waveform_identical[];
+extern float waveform_different[];

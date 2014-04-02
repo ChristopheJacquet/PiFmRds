@@ -1,3 +1,23 @@
+/*
+    PiFmRds - FM/RDS transmitter for the Raspberry Pi
+    Copyright (C) 2014 Christophe Jacquet, F8FTK
+    
+    See https://github.com/ChristopheJacquet/PiFmRds
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -89,16 +109,23 @@ void get_rds_group(int *buffer) {
     }
 }
 
+/* Get a number of RDS samples. This generates the envelope of the waveform using
+   pre-generated elementary waveform samples, and then it amplitude-modulates the 
+   envelope with a 57 kHz carrier, which is very efficient as 57 kHz is 4 times the
+   sample frequency we are working at (228 kHz).
+ */
 void get_rds_samples(float *buffer, int count) {
     static int bit_buffer[BITS_PER_GROUP];
     static int bit_pos = BITS_PER_GROUP;
     
-    //static int prev_output = 0;
+    static int prev_output = 0;
+    static int cur_output = 0;
     static int prev_bit = 0;
     static int cur_bit = 0;
-    //static int cur_output = 0;
-    static int next_bit = 0;
     static int sample_pos = SAMPLES_PER_BIT;
+    static float *current_waveform = NULL;
+    static int inverting = 0;
+    static int phase = 0;
     
     for(int i=0; i<count; i++) {
         if(sample_pos >= SAMPLES_PER_BIT) {
@@ -106,29 +133,52 @@ void get_rds_samples(float *buffer, int count) {
                 get_rds_group(bit_buffer);
                 bit_pos = 0;
             }
+            
+            // do differential encoding
             prev_bit = cur_bit;
-            cur_bit = next_bit;
-            next_bit = bit_buffer[bit_pos];
-            //prev_output = cur_output;
-            //cur_output = prev_output ^ cur_bit;
+            cur_bit = bit_buffer[bit_pos];
+            prev_output = cur_output;
+            cur_output = prev_output ^ cur_bit;
+            
+            // select appropriate waveform
+            current_waveform = (prev_output == cur_output) ? 
+                                            waveform_identical : waveform_different;
+    
+            inverting = (prev_output == 0) ? 1 : -1;
             
             bit_pos++;
-            //printf("%d", cur_bit); fflush(stdout);
             sample_pos = 0;
+            //printf("%d", cur_bit); fflush(stdout);
         }
         
-        float sample = symbol_samples[prev_bit][cur_bit][next_bit][sample_pos];
+        float sample = current_waveform[sample_pos] * inverting;
+        
+        // modulate at 57 kHz
+        // use phase for this
+        switch(phase) {
+            case 0:
+            case 2: sample = 0; break;
+            case 1: break;
+            case 3: sample = -sample; break;
+        }
+        phase++;
+        if(phase >= 4) phase = 0;
+        
         *buffer++ = sample;
-        printf("%c", (((int)(sample*100))));
         sample_pos++;
     }
 }
 
+/* Simple test program */
 int main(int argc, char **argv) {
     rds_params.pi = 0x1234;
     
     strncpy(rds_params.text, "Hello", 64);
-    float buffer[128000];
+    float buffer[300000];
     
-    get_rds_samples(buffer, 100000);
+    get_rds_samples(buffer, 300000);
+    
+    for(int i=0; i<300000; i++) {
+        printf("%c", (((int)(buffer[i]*50))));
+    }
 }

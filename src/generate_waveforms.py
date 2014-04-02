@@ -30,32 +30,27 @@ def format_number(x):
     else:
         return unicode(x)
 
-def generate_bit_in_context(prev, current, next):
-    name = u"{}{}{}".format(prev, current, next)
+def generate_bit_in_context(pattern, name):
+    offset = 240
+    l = 96
+    count = 2
+    
+    shapedSamples = rds.unmodulated_signal(pattern, sample_rate)
 
-    shapedSamples = rds.unmodulated_signal([prev, current, next], sample_rate)
-
-    out = am.modulate(shapedSamples, sample_rate, frequency=57000, phase=0)
-
-    out = out[336:336+192]
+    out = shapedSamples[offset:offset+l*count]
 
     iout = (out * 20000./max(abs(out)) ).astype(numpy.dtype('>i2'))
-    wavfile.write(u"{}.wav".format(name), sample_rate, iout)
+    wavfile.write(u"waveform_{}.wav".format(name), sample_rate, iout)
     
-    outc.write(u"float symbol_{name}[] = {{{values}}};\n\n".format(
+    outc.write(u"float waveform_{name}[] = {{{values}}};\n\n".format(
         name = name,
         values = u", ".join(map(format_number, out))))
     
-    #outh.write(u"extern float symbol_{name}[];\n".format(name=name))
+    outh.write(u"extern float waveform_{name}[];\n".format(name=name))
 
 
-for prev in [0, 1]:
-    for current in [0, 1]:
-        for next in [0, 1]:
-            generate_bit_in_context(prev, current, next)
-
-outc.write(u"float *symbol_samples[2][2][2] = {{{symbol_000, symbol_001}, {symbol_010, symbol_011}}, {{symbol_100, symbol_101}, {symbol_110, symbol_111}}};\n")
-outh.write(u"extern float *symbol_samples[2][2][2];\n")
+generate_bit_in_context([0, 0, 0], "identical")
+generate_bit_in_context([0, 1, 0], "different")
 
 outc.close()
 outh.close()
