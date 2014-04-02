@@ -120,7 +120,6 @@ void get_rds_samples(float *buffer, int count) {
     
     static int prev_output = 0;
     static int cur_output = 0;
-    static int prev_bit = 0;
     static int cur_bit = 0;
     static int sample_pos = SAMPLES_PER_BIT;
     static float *current_waveform = NULL;
@@ -135,7 +134,6 @@ void get_rds_samples(float *buffer, int count) {
             }
             
             // do differential encoding
-            prev_bit = cur_bit;
             cur_bit = bit_buffer[bit_pos];
             prev_output = cur_output;
             cur_output = prev_output ^ cur_bit;
@@ -169,11 +167,17 @@ void get_rds_samples(float *buffer, int count) {
     }
 }
 
-/* Simple test program */
-int main(int argc, char **argv) {
-    rds_params.pi = 0x1234;
+void set_rds_params(uint16_t pi_code, char *text) {
+    rds_params.pi = pi_code;
     
-    strncpy(rds_params.text, "Hello", 64);
+    strncpy(rds_params.text, text, 64);
+}
+
+
+/* Simple test program */
+void test(int argc, char **argv) {
+    set_rds_params(0x1234, "Hello");
+    
     float buffer[300000];
     
     get_rds_samples(buffer, 300000);
