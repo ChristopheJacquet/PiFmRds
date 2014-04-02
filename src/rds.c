@@ -172,17 +172,3 @@ void set_rds_params(uint16_t pi_code, char *text) {
     
     strncpy(rds_params.text, text, 64);
 }
-
-
-/* Simple test program */
-void test(int argc, char **argv) {
-    set_rds_params(0x1234, "Hello");
-    
-    float buffer[300000];
-    
-    get_rds_samples(buffer, 300000);
-    
-    for(int i=0; i<300000; i++) {
-        printf("%c", (((int)(buffer[i]*50))));
-    }
-}
