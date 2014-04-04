@@ -37,7 +37,7 @@ def generate_bit_in_context(pattern, name):
     
     shapedSamples = rds.unmodulated_signal(pattern, sample_rate)
 
-    out = shapedSamples[offset:offset+l*count]
+    out = shapedSamples #[offset:offset+l*count]
 
     iout = (out * 20000./max(abs(out)) ).astype(numpy.dtype('>i2'))
     wavfile.write(u"waveform_{}.wav".format(name), sample_rate, iout)
@@ -46,11 +46,11 @@ def generate_bit_in_context(pattern, name):
         name = name,
         values = u", ".join(map(format_number, out))))
     
-    outh.write(u"extern float waveform_{name}[];\n".format(name=name))
+    outh.write(u"extern float waveform_{name}[{size}];\n".format(name=name, size=len(out)))
 
 
-generate_bit_in_context([0, 0, 0], "identical")
-generate_bit_in_context([0, 1, 0], "different")
+generate_bit_in_context([1], "biphase")
+#generate_bit_in_context([0, 1, 0], "different")
 
 outc.close()
 outh.close()

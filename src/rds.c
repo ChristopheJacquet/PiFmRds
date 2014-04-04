@@ -41,6 +41,7 @@ struct {
 
 #define BITS_PER_GROUP (GROUP_LENGTH * (BLOCK_SIZE+POLY_DEG))
 #define SAMPLES_PER_BIT 192
+#define FILTER_SIZE (sizeof(waveform_biphase)/sizeof(float))
 
 
 uint16_t offset_words[] = {0x0FC, 0x198, 0x168, 0x1B4};
@@ -117,17 +118,20 @@ void get_rds_group(int *buffer) {
 void get_rds_samples(float *buffer, int count) {
     static int bit_buffer[BITS_PER_GROUP];
     static int bit_pos = BITS_PER_GROUP;
+    static float sample_buffer[2*FILTER_SIZE] = {0};
     
     static int prev_output = 0;
     static int cur_output = 0;
     static int cur_bit = 0;
-    static int sample_pos = SAMPLES_PER_BIT;
-    static float *current_waveform = NULL;
+    static int sample_count = SAMPLES_PER_BIT;
     static int inverting = 0;
     static int phase = 0;
-    
+
+    static int in_sample_index = 0;
+    static int out_sample_index = FILTER_SIZE;
+        
     for(int i=0; i<count; i++) {
-        if(sample_pos >= SAMPLES_PER_BIT) {
+        if(sample_count >= SAMPLES_PER_BIT) {
             if(bit_pos >= BITS_PER_GROUP) {
                 get_rds_group(bit_buffer);
                 bit_pos = 0;
@@ -138,18 +142,29 @@ void get_rds_samples(float *buffer, int count) {
             prev_output = cur_output;
             cur_output = prev_output ^ cur_bit;
             
-            // select appropriate waveform
-            current_waveform = (prev_output == cur_output) ? 
-                                            waveform_identical : waveform_different;
-    
-            inverting = (prev_output == 0) ? 1 : -1;
+            inverting = (cur_output == 1) ? 1 : -1;
+            
+            float *src = waveform_biphase;
+            int idx = in_sample_index;
+            for(int j=0; j<FILTER_SIZE; j++) {
+                //printf("%d ", j); fflush(stdout);
+                if(j<FILTER_SIZE-SAMPLES_PER_BIT) {
+                    sample_buffer[idx++] += (*src++) * inverting;
+                } else {
+                    sample_buffer[idx++] = (*src++) * inverting;
+                }
+                if(idx >= 2*FILTER_SIZE) idx = 0;
+            }
+            in_sample_index += SAMPLES_PER_BIT;
+            if(in_sample_index >= 2*FILTER_SIZE) in_sample_index -= 2*FILTER_SIZE;
             
             bit_pos++;
-            sample_pos = 0;
+            sample_count = 0;
             //printf("%d", cur_bit); fflush(stdout);
         }
         
-        float sample = current_waveform[sample_pos] * inverting;
+        float sample = sample_buffer[out_sample_index++];
+        if(out_sample_index >= 2*FILTER_SIZE) out_sample_index = 0;
         
         // modulate at 57 kHz
         // use phase for this
@@ -163,7 +178,7 @@ void get_rds_samples(float *buffer, int count) {
         if(phase >= 4) phase = 0;
         
         *buffer++ = sample;
-        sample_pos++;
+        sample_count++;
     }
 }
 

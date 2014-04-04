@@ -4,5 +4,4 @@
    Released under the GNU GPL v3 license.
 */
 
-extern float waveform_identical[];
-extern float waveform_different[];
+extern float waveform_biphase[575];
