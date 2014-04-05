@@ -3,10 +3,10 @@
 # This program uses Pydemod, see https://github.com/ChristopheJacquet/Pydemod
 
 import pydemod.app.rds as rds
-import pydemod.modulation.am as am
 import numpy
 import scipy.io.wavfile as wavfile
 import io
+import matplotlib.pyplot as plt
 
 sample_rate = 228000
 
@@ -29,16 +29,29 @@ def generate_bit_in_context(pattern, name):
     l = 96
     count = 2
     
-    shapedSamples = rds.unmodulated_signal(pattern, sample_rate)
 
-    out = shapedSamples #[offset:offset+l*count]
+    sample = numpy.zeros(3*l)
+    sample[l] = 1
+    sample[2*l] = -1
+    
+    # Apply the data-shaping filter
+    sf = rds.pulse_shaping_filter(96*8, 228000)
+    shapedSamples = numpy.convolve(sample, sf)
+
+   
+#    shapedSamples = rds.unmodulated_signal(pattern, sample_rate)
+
+    out = shapedSamples[528-288:528+288] #[offset:offset+l*count]
+    plt.plot(sf)
+    plt.plot(out)
+    plt.show()
 
     iout = (out * 20000./max(abs(out)) ).astype(numpy.dtype('>i2'))
     wavfile.write(u"waveform_{}.wav".format(name), sample_rate, iout)
     
     outc.write(u"float waveform_{name}[] = {{{values}}};\n\n".format(
         name = name,
-        values = u", ".join(map(unicode, out/3.))))
+        values = u", ".join(map(unicode, out/2.5))))
         # note: need to limit the amplitude so as not to saturate when the biphase
         # waveforms are summed
     
