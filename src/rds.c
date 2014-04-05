@@ -129,7 +129,7 @@ void get_rds_samples(float *buffer, int count) {
     static int phase = 0;
 
     static int in_sample_index = 0;
-    static int out_sample_index = 0;
+    static int out_sample_index = SAMPLE_BUFFER_SIZE-1;
         
     for(int i=0; i<count; i++) {
         if(sample_count >= SAMPLES_PER_BIT) {
@@ -145,23 +145,29 @@ void get_rds_samples(float *buffer, int count) {
             
             inverting = (cur_output == 1);
 
+            /*
             // zero out last bit
             int idx = in_sample_index-1;
+            printf("  Wipe: %d -> ", idx);
             
             for(int j=0; j<SAMPLES_PER_BIT; j++) {
                 if(idx<0) idx = SAMPLE_BUFFER_SIZE-1;
                 sample_buffer[idx] = 0;
                 idx--;
-            }            
+            }
+            printf("%d\n", idx+1);
+            */
 
             float *src = waveform_biphase;
-            idx = in_sample_index;
+            int idx = in_sample_index;
+            //printf("In: %d -> ", idx);
             for(int j=0; j<FILTER_SIZE; j++) {
                 float val = (*src++);
                 if(inverting) val = -val;
                 sample_buffer[idx++] += val;
                 if(idx >= SAMPLE_BUFFER_SIZE) idx = 0;
             }
+            //printf("%d\n", idx-1);
             in_sample_index += SAMPLES_PER_BIT;
             if(in_sample_index >= SAMPLE_BUFFER_SIZE) in_sample_index -= SAMPLE_BUFFER_SIZE;
             
@@ -170,8 +176,12 @@ void get_rds_samples(float *buffer, int count) {
             //printf("%d", cur_bit); fflush(stdout);
         }
         
-        float sample = sample_buffer[out_sample_index++];
+        //printf("[%d]", out_sample_index);
+        float sample = sample_buffer[out_sample_index];
+        sample_buffer[out_sample_index] = 0;
+        out_sample_index++;
         if(out_sample_index >= SAMPLE_BUFFER_SIZE) out_sample_index = 0;
+        
         
         // modulate at 57 kHz
         // use phase for this
