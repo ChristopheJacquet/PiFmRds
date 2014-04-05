@@ -24,12 +24,6 @@ header = u"""
 outc.write(header)
 outh.write(header)
 
-def format_number(x):
-    if abs(x) < 1e-10:
-        return u"0"
-    else:
-        return unicode(x)
-
 def generate_bit_in_context(pattern, name):
     offset = 240
     l = 96
@@ -44,7 +38,9 @@ def generate_bit_in_context(pattern, name):
     
     outc.write(u"float waveform_{name}[] = {{{values}}};\n\n".format(
         name = name,
-        values = u", ".join(map(format_number, out))))
+        values = u", ".join(map(unicode, out/3.))))
+        # note: need to limit the amplitude so as not to saturate when the biphase
+        # waveforms are summed
     
     outh.write(u"extern float waveform_{name}[{size}];\n".format(name=name, size=len(out)))
 
