@@ -97,6 +97,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sndfile.h>
 
 #include "rds.h"
 
@@ -259,6 +260,7 @@ map_peripheral(uint32_t base, uint32_t len)
 
 #define SUBSIZE 1
 #define RDS_DATA_SIZE 5000
+#define DATA_SIZE 10000
 
 
 int
@@ -375,7 +377,7 @@ main(int argc, char **argv)
     clk_reg[PWMCLK_CNTL] = 0x5A000006;              // Source=PLLD and disable
     udelay(100);
     // theorically : 1096 + 2012*2^-12
-    clk_reg[PWMCLK_DIV] = 0x5A000000 | (1096<<12) | 1916; // 1916 on my RaspberryPi
+    clk_reg[PWMCLK_DIV] = 0x5A000000 | (1096<<12) | 2012; // 1916 on my RaspberryPi
     udelay(100);
     clk_reg[PWMCLK_CNTL] = 0x5A000216;              // Source=PLLD and enable + MASH filter 1
     udelay(100);
@@ -399,16 +401,19 @@ main(int argc, char **argv)
 
     
     // Try to read audio samples from a .wav file
-    fd = 0;
-    short data[1024];
+    SNDFILE *sf = NULL;
+    SF_INFO info;
+    
+    float data[DATA_SIZE];
     int data_len = 0;
         
     if (argc > 1) {
-        fd = open(argv[1], 'r');
-
-        data_len = read(fd, data, 22);
-        if (data_len < 22)
+        sf = sf_open(argv[1],SFM_READ,&info);
+        if(sf == NULL)
             fatal("Failed to read .wav file\n");
+        if(info.samplerate != 228000)
+            fatal("Sample rate must be 228 kHz\n");
+        
         data_len = 0;        
     }
 
@@ -426,13 +431,7 @@ main(int argc, char **argv)
     uint16_t count = 0;
     uint16_t count2 = 0;
     
-    printf("Starting to transmit\n");
-
-    int do_tune = 1;
-    int tune_on = 1;
-    uint8_t tune_idx = 0;
-    uint32_t tune_cycle_counter = 0;
-    float tune_level = 1;
+    printf("Starting to transmit on %3.1f MHz.\n", carrier_freq/1e6);
 
     for (;;) {
         if(count == 512) {
@@ -465,13 +464,16 @@ main(int argc, char **argv)
             }
             
             // read samples in the wav file if necessary
-            if(fd && data_len == 0) {
-                data_len = read(fd, data, sizeof(data));
-                if (data_len < 0)
-                    fatal("Error reading data: %m\n");
-                data_len /= 2;
-                if(data_len == 0) {
-                    lseek(fd, 22, SEEK_SET);
+            if(sf && data_len == 0) {
+                for(int j=0; j<2; j++) { // one retry
+                    data_len = sf_read_float(sf, data, DATA_SIZE);
+                    if (data_len < 0)
+                        fatal("Error reading data: %m\n");
+                    if(data_len == 0) {
+                        sf_seek(sf, 0, SEEK_SET);
+                    } else {
+                        break;
+                    }
                 }
                 data_index = 0;
             }
@@ -482,30 +484,15 @@ main(int argc, char **argv)
             float dval = rds_data[rds_index] * (DEVIATION / 10.);
             rds_index++;
 
-            // add modulation from a 445 Hz (228000 /2 /256) tune
-            if(do_tune) {
-                if(tune_idx == 0 && tune_on) {
-                    tune_level = 1-tune_level;
-                }
-                dval += tune_level * DEVIATION/5.;
-                tune_idx++;
-            
-                tune_cycle_counter++;
-                if(tune_cycle_counter >= 228000) {
-                    tune_cycle_counter = 0;
-                    tune_on = !tune_on;
-                }
-            }
             // add modulation from .wav?
-            else if(fd && data_len > 0) {
+            if(sf && data_len > 0) {
+                dval += data[data_index] * DEVIATION/2;
                 data_index++;
                 data_len--;
-                // do something here
             }
 
             int intval = (int)((floor)(dval));
             //int frac = (int)((dval - (float)intval) * SUBSIZE);
-            //int j;
 
 
             ctl->sample[last_sample++] = (0x5A << 24 | freq_ctl) + intval; //(frac > j ? intval + 1 : intval);
@@ -516,8 +503,6 @@ main(int argc, char **argv)
         }
         last_cb = (uint32_t)virtbase + last_sample * sizeof(dma_cb_t) * 2;
     }
-    
-    printf("EOF reached\n");
 
     terminate(0);
 
