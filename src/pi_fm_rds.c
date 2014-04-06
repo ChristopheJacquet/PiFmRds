@@ -263,9 +263,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 10000
 
 
-int
-main(int argc, char **argv)
-{
+int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int16_t ppm) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -330,8 +328,6 @@ main(int argc, char **argv)
     uint32_t phys_pwm_fifo_addr = 0x7e20c000 + 0x18;
 
 
-    uint32_t carrier_freq = 107900000;
-
     // Calculate the frequency control word
     // The fractional part is stored in the lower 12 bits
     uint32_t freq_ctl = ((float)(PLLFREQ / carrier_freq)) * ( 1 << 12 );
@@ -365,19 +361,28 @@ main(int argc, char **argv)
     // Set the range to 2 bits. PLLD is at 500 MHz, therefore to get 228 kHz
     // we need a divisor of 500000 / 2 / 228 = 1096.491228
     //
-    // This is 1096 + 2012*2^-12
+    // This is 1096 + 2012*2^-12 theoretically
     //
     // However the fractional part may have to be adjusted to take the actual
     // frequency of your Pi's oscillator into account. For example on my Pi,
     // the fractional part should be 1916 instead of 2012 to get exactly 
     // 228 kHz. However RDS decoding is still okay even at 2012.
+    //
+    // So we use the 'ppm' parameter to compensate for the oscillator error
+
+    float divider = (500000./(2*228*(1.+ppm/1.e6)));
+    uint32_t idivider = (uint32_t) divider;
+    uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
+    
+    printf("ppm corr is %d, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912]\n", 
+                ppm, divider, idivider, fdivider);
 
     pwm_reg[PWM_CTL] = 0;
     udelay(10);
     clk_reg[PWMCLK_CNTL] = 0x5A000006;              // Source=PLLD and disable
     udelay(100);
     // theorically : 1096 + 2012*2^-12
-    clk_reg[PWMCLK_DIV] = 0x5A000000 | (1096<<12) | 2012; // 1916 on my RaspberryPi
+    clk_reg[PWMCLK_DIV] = 0x5A000000 | (idivider<<12) | fdivider;
     udelay(100);
     clk_reg[PWMCLK_CNTL] = 0x5A000216;              // Source=PLLD and enable + MASH filter 1
     udelay(100);
@@ -400,51 +405,48 @@ main(int argc, char **argv)
     dma_reg[DMA_CS] = 0x10880001;    // go, mid priority, wait for outstanding writes
 
     
-    // Try to read audio samples from a .wav file
-    SNDFILE *sf = NULL;
-    SF_INFO info;
-    
+    uint32_t last_cb = (uint32_t)ctl->cb;
+
+    // Data structures for sound data
     float data[DATA_SIZE];
     int data_len = 0;
-        
-    if (argc > 1) {
-        sf = sf_open(argv[1],SFM_READ,&info);
-        if(sf == NULL)
-            fatal("Failed to read .wav file\n");
-        if(info.samplerate != 228000)
-            fatal("Sample rate must be 228 kHz\n");
-        
-        data_len = 0;        
-    }
-
-
-
-    uint32_t last_cb = (uint32_t)ctl->cb;
     int data_index = 0;
 
+    // Data structures for RDS data
     float rds_data[RDS_DATA_SIZE];
     int rds_index = sizeof(rds_data);
     
-    char ps[9] = {0};
-    set_rds_pi(0x2345);
-    set_rds_rt("RPi-Live - Live RDS transmission from the Raspberry Pi!");
+    // Initialize the RDS modulator
+    char myps[9] = {0};
+    set_rds_pi(pi);
+    set_rds_rt(rt);
     uint16_t count = 0;
     uint16_t count2 = 0;
+    
+    if(ps) {
+        set_rds_ps(ps);
+        printf("PI: %04X, PS: \"%s\"\n", pi, ps);
+    } else {
+        printf("PI: %04X, PS: <Varying>\n", pi);
+    }
+    printf("RT: \"%s\"\n", rt);
     
     printf("Starting to transmit on %3.1f MHz.\n", carrier_freq/1e6);
 
     for (;;) {
-        if(count == 512) {
-            snprintf(ps, 9, "%08d", count2);
-            set_rds_ps(ps);
-            count2++;
-        }
-        if(count == 1024) {
-            set_rds_ps("RPi-Live");
-            count = 0;
-        }
-        count++;
-        
+        // Default (varying) PS
+        if(!ps) {
+            if(count == 512) {
+                snprintf(myps, 9, "%08d", count2);
+                set_rds_ps(myps);
+                count2++;
+            }
+            if(count == 1024) {
+                set_rds_ps("RPi-Live");
+                count = 0;
+            }
+            count++;
+        }        
         
         usleep(5000);
 
@@ -509,3 +511,53 @@ main(int argc, char **argv)
     return 0;
 }
 
+
+int main(int argc, char **argv) {
+    SNDFILE *sf = NULL;
+    uint32_t carrier_freq = 107900000;
+    char *ps = NULL;
+    char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
+    uint16_t pi = 0x1234;
+    int16_t ppm = 0;
+    
+    for(int i=1; i<argc; i++) {
+        char *arg = argv[i];
+        char *param = NULL;
+        
+        if(arg[0] == '-' && i+1 < argc) param = argv[i+1];
+        
+        if(strcmp("-wav", arg)==0 && param != NULL) {
+            i++;
+            // Try to read audio samples from a .wav file
+            printf("Using .wav file: %s\n", param);
+            SF_INFO info;
+            sf = sf_open(param,SFM_READ,&info);
+            if(sf == NULL)
+                fatal("Failed to read .wav file\n");
+            if(info.samplerate != 228000)
+                fatal("Sample rate must be 228 kHz\n");
+        } else if(strcmp("-freq", arg)==0 && param != NULL) {
+            i++;
+            carrier_freq = 1e6 * atof(param);
+            if(carrier_freq < 87500000 || carrier_freq > 108000000)
+                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
+        } else if(strcmp("-pi", arg)==0 && param != NULL) {
+            i++;
+            pi = (uint16_t) strtol(param, NULL, 16);
+        } else if(strcmp("-ps", arg)==0 && param != NULL) {
+            i++;
+            ps = param;
+        } else if(strcmp("-rt", arg)==0 && param != NULL) {
+            i++;
+            rt = param;
+        } else if(strcmp("-ppm", arg)==0 && param != NULL) {
+            i++;
+            ppm = atoi(param);
+        } else {
+            fatal("Unrecognised argument: %s\n"
+            "Syntax: pi_fm_rds [-freq freq] [-wav file.wav] [-ppm ppm_error] [-pi pi_code] [-ps ps_text] [-rt rt_text]\n", arg);
+        }
+    }
+    
+    tx(carrier_freq, sf, pi, ps, rt, ppm);
+}
