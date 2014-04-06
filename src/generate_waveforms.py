@@ -1,6 +1,27 @@
 #!/usr/bin/python
 
-# This program uses Pydemod, see https://github.com/ChristopheJacquet/Pydemod
+
+#   PiFmRds - FM/RDS transmitter for the Raspberry Pi
+#   Copyright (C) 2014 Christophe Jacquet, F8FTK
+#   
+#   See https://github.com/ChristopheJacquet/PiFmRds
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#   This program generates the waveform of a single biphase symbol
+#
+#   This program uses Pydemod, see https://github.com/ChristopheJacquet/Pydemod
 
 import pydemod.app.rds as rds
 import numpy
@@ -24,7 +45,7 @@ header = u"""
 outc.write(header)
 outh.write(header)
 
-def generate_bit_in_context(pattern, name):
+def generate_bit(name):
     offset = 240
     l = 96
     count = 2
@@ -39,8 +60,6 @@ def generate_bit_in_context(pattern, name):
     shapedSamples = numpy.convolve(sample, sf)
 
    
-#    shapedSamples = rds.unmodulated_signal(pattern, sample_rate)
-
     out = shapedSamples[528-288:528+288] #[offset:offset+l*count]
     plt.plot(sf)
     plt.plot(out)
@@ -58,8 +77,7 @@ def generate_bit_in_context(pattern, name):
     outh.write(u"extern float waveform_{name}[{size}];\n".format(name=name, size=len(out)))
 
 
-generate_bit_in_context([1], "biphase")
-#generate_bit_in_context([0, 1, 0], "different")
+generate_bit("biphase")
 
 outc.close()
 outh.close()
