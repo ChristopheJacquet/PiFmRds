@@ -38,7 +38,9 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     
-    set_rds_params(0x1234, argv[2]);
+    set_rds_pi(0x1234);
+    set_rds_ps(argv[2]);
+    set_rds_rt(argv[2]);
     
     float buffer[LENGTH];
     
