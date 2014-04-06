@@ -1,17 +1,24 @@
-Pi-FM-RDS: FM-RDS transmitter using the Raspberry Pi's PWM
-==========================================================
+Pi-FM-RDS
+=========
+
+
+## FM-RDS transmitter using the Raspberry Pi's PWM
+## by Christophe Jacquet, F8FTK
 
 This program generates an FM modulation, with RDS (Radio Data System) data generated in real time.
 
-It is based on the FM transmitter created by Oliver Mattos and Oskar Weigl, and later adapted to using DMA by Richard Hirst.
+It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst).
 
 
 ## How to use it?
 
-Run `make` in the `src` directory:
+To build Pi-FM-RDS, depends on the `sndfile` library. On Debian-like distributions, for instance Raspbian, run `sudo apt-get install libsndfile1-dev`.
+
+Then run `make` in the `src` directory:
 
 ```bash
-cd src
+git clone https://github.com/ChristopheJacquet/PiFmRds.git
+cd PiFmRds/src
 make
 ```
 
@@ -21,16 +28,16 @@ Then you can just run:
 sudo ./pi_fm_rds
 ```
 
-This will generate an FM transmission on 107.9 MHz, with default station name (PS), radiotext (RT) and PI-code.
+This will generate an FM transmission on 107.9 MHz, with default station name (PS), radiotext (RT) and PI-code, without audio.
 
 
-You can add a monophonic sound by referencing a WAV file as follows:
+You can add monophonic sound by referencing a WAV file as follows:
 
 ```
 sudo ./pi_fm_rds -wav sound.wav
 ```
 
-*Current limitation: the WAV file must be sampled at 228 kHz. Use for instance the two files provided, `sound.wav` and `pulses.wav`.*
+**Current limitation: the WAV file must be sampled at 228 kHz. Use for instance the two files provided, `sound.wav` and `pulses.wav`.**
 
 The more general syntax for running Pi-FM-RDS is as follows:
 
@@ -44,8 +51,10 @@ All arguments are optional:
 * `-wav` specifies a WAV file to play. It must be sampled at 228 kHz, but no frequency above 18 kHz must be present. Example: `-wav sound.wav`.
 * `-ppm` specifies your Raspberry Pi's oscillator error in parts per million (ppm), see below.
 * `-pi` specifies the PI-code of the RDS broadcast. 4 hexadecimal digits. Example: `-pi FFFF`.
-* `-ps` specifies the station name (Program Service name, PS) of the RDS broadcast. Limit: 8 characters. Example: `-pi RASP-PI`.
+* `-ps` specifies the station name (Program Service name, PS) of the RDS broadcast. Limit: 8 characters. Example: `-ps RASP-PI`.
 * `-rt` specifies the radiotext (RT) to be transmitted. Limit: 64 characters. Example: `-rt 'Hello, world!'`.
+
+By default the PS changes back and forth between `Pi-FmRds` and a sequence number, starting at `00000000`. The PS changes around one time per second.
 
 
 ### Calibration
@@ -54,7 +63,7 @@ The RDS standards states that the error for the 57 kHz subcarrier must be less t
 
 In practice, I found that Pi-FM-RDS works okay even without using the `-ppm` parameter. I suppose the receiver are more tolerant than the RDS spec.
 
-One way to measure the ppm error is to play the `pulses.wav` file: it will play a pulse for precisely 1 second, then play a 1-second silence, and so on. Record the audio output from a radio with a good audio card. Say you sample at 44.1 kHz. Measure 10 intervals. Using [Audacity](http://audacity.sourceforge.net/) for measure determine the number of samples of these 10 intervals: in the absence of clock error, it should be 441,000 samples. With my Pi, I found 441,132 samples. Therefore, my ppm error is (441132-441000)/441000 = 299 ppm, *assuming that my sampling device has no clock error...*
+One way to measure the ppm error is to play the `pulses.wav` file: it will play a pulse for precisely 1 second, then play a 1-second silence, and so on. Record the audio output from a radio with a good audio card. Say you sample at 44.1 kHz. Measure 10 intervals. Using [Audacity](http://audacity.sourceforge.net/) for measure determine the number of samples of these 10 intervals: in the absence of clock error, it should be 441,000 samples. With my Pi, I found 441,132 samples. Therefore, my ppm error is (441132-441000)/441000 = 299 ppm, **assuming that my sampling device has no clock error...**
 
 
 ## Diclaimer
@@ -62,7 +71,7 @@ One way to measure the ppm error is to play the `pulses.wav` file: it will play 
 Never use this program to transmit VHF-FM data through an antenna, as it is
 illegal in most countries. This code is for testing purposes only.
 Always connect a shielded transmission line from the RaspberryPi directly
-to a radio receiver, so as *not* to emit radio waves.
+to a radio receiver, so as **not** to emit radio waves.
 
 
 ## Tests
@@ -73,7 +82,7 @@ Pi-FM-RDS was successfully tested with all my RDS-able devices, namely:
 * a Sangean PR-D1 portable receiver from 1998,
 * a Philips MBD7020 hifi system from 2012,
 * a Silicon Labs [USBFMRADIO-RD](http://www.silabs.com/products/mcu/Pages/USBFMRadioRD.aspx) USB stick, employing an Si4701 chip, using my [RDS Surveyor](http://rds-surveyor.sourceforge.net/) program,
-* a “PCear Fm Radio”, a Chinese clone of the above, still using RDS Surveyor.
+* a “PCear Fm Radio”, a Chinese clone of the above, again using RDS Surveyor.
 
 Reception works perfectly with all the devices above. RDS Surveyor reports no group errors.
 
@@ -94,4 +103,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© Christophe Jacquet (F8FTK), 2014. Released under the GNU GPL v3.
+© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014. Released under the GNU GPL v3.

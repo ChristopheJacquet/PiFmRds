@@ -442,7 +442,7 @@ int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int1
                 count2++;
             }
             if(count == 1024) {
-                set_rds_ps("RPi-Live");
+                set_rds_ps("Pi-FmRds");
                 count = 0;
             }
             count++;
