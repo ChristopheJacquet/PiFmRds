@@ -8,12 +8,15 @@ This program generates an FM modulation, with RDS (Radio Data System) data gener
 
 It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS transmitter.
 
+<p style="text-align:center;">
+<img src="doc/vfd_display.jpg" alt="PI-FMRDS">
+</p>
 
 ## How to use it?
 
 To build Pi-FM-RDS, depends on the `sndfile` library. On Debian-like distributions, for instance Raspbian, run `sudo apt-get install libsndfile1-dev`.
 
-Then run `make` in the `src` directory:
+Then clone the source repository and run `make` in the `src` directory:
 
 ```bash
 git clone https://github.com/ChristopheJacquet/PiFmRds.git
@@ -56,7 +59,7 @@ All arguments are optional:
 By default the PS changes back and forth between `Pi-FmRds` and a sequence number, starting at `00000000`. The PS changes around one time per second.
 
 
-### Calibration
+### Clock calibration (if experiencing difficulties)
 
 The RDS standards states that the error for the 57 kHz subcarrier must be less than ± 6 Hz, i.e. less than 105 ppm (parts per million). The Raspberry Pi's oscillator error may be above this figure. That is where the `-ppm` parameter comes into play: you specify your Pi's error and Pi-FM-RDS adjusts the clock dividers accordingly.
 
@@ -68,7 +71,7 @@ One way to measure the ppm error is to play the `pulses.wav` file: it will play 
 ## Diclaimer
 
 Never use this program to transmit VHF-FM data through an antenna, as it is
-illegal in most countries. This code is for testing purposes only.
+illegal in most countries. This code is for experimental purposes only.
 Always connect a shielded transmission line from the RaspberryPi directly
 to a radio receiver, so as **not** to emit radio waves.
 
