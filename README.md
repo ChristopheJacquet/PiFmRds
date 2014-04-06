@@ -8,9 +8,7 @@ This program generates an FM modulation, with RDS (Radio Data System) data gener
 
 It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS transmitter.
 
-<p style="text-align:center;">
-<img src="doc/vfd_display.jpg" alt="PI-FMRDS">
-</p>
+![](doc/vfd_display.jpg)
 
 ## How to use it?
 
@@ -82,12 +80,14 @@ Pi-FM-RDS was successfully tested with all my RDS-able devices, namely:
 
 * a Sony ICF-C20RDS alarm clock from 1995,
 * a Sangean PR-D1 portable receiver from 1998,
+* a Samsung Galaxy S2 mobile phone from 2011,
 * a Philips MBD7020 hifi system from 2012,
 * a Silicon Labs [USBFMRADIO-RD](http://www.silabs.com/products/mcu/Pages/USBFMRadioRD.aspx) USB stick, employing an Si4701 chip, using my [RDS Surveyor](http://rds-surveyor.sourceforge.net/) program,
 * a “PCear Fm Radio”, a Chinese clone of the above, again using RDS Surveyor.
 
 Reception works perfectly with all the devices above. RDS Surveyor reports no group errors.
 
+![](doc/galaxy_s2.jpg)
 
 ## Design
 
