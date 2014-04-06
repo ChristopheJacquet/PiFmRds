@@ -28,7 +28,7 @@ Then you can just run:
 sudo ./pi_fm_rds
 ```
 
-This will generate an FM transmission on 107.9 MHz, with default station name (PS), radiotext (RT) and PI-code, without audio.
+This will generate an FM transmission on 107.9 MHz, with default station name (PS), radiotext (RT) and PI-code, without audio. The radiofrequency signal is emitted on GPIO 4 (pin 7 on header P1).
 
 
 You can add monophonic sound by referencing a WAV file as follows:
