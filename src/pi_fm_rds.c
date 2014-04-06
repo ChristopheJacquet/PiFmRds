@@ -101,7 +101,7 @@
 #include "rds.h"
 
 
-#define NUM_SAMPLES        400000
+#define NUM_SAMPLES        50000
 #define NUM_CBS            (NUM_SAMPLES * 2)
 
 #define BCM2708_DMA_NO_WIDE_BURSTS    (1<<26)
@@ -125,10 +125,6 @@
 #define GPIO_BASE        0x20200000
 #define GPIO_LEN        0xB4
 
-// see http://elinux.org/BCM2835_registers#PM
-#define PM_BASE         0x20100000
-#define PM_PADS2        0x2C
-#define PM_LEN          0x114
 
 #define PWM_CTL            (0x00/4)
 #define PWM_DMAC        (0x08/4)
@@ -154,7 +150,7 @@
 #define GPFSEL0            (0x00/4)
 
 #define PLLFREQ            500000000.    // PLLD is running at 500MHz        ////
-#define CARRIERFREQ        107900000.    // Carrier frequency is 100MHz
+
 // The deviation specifies how wide the signal is. Use 25.0 for WBFM
 // (broadcast radio) and about 3.5 for NBFM (walkie-talkie style radio)
 #define DEVIATION        25.0
@@ -178,7 +174,6 @@ static volatile uint32_t *pwm_reg;
 static volatile uint32_t *clk_reg;
 static volatile uint32_t *dma_reg;
 static volatile uint32_t *gpio_reg;
-static volatile uint32_t *pm_reg;
 
 struct control_data_s {
     dma_cb_t cb[NUM_CBS];
@@ -269,7 +264,7 @@ map_peripheral(uint32_t base, uint32_t len)
 int
 main(int argc, char **argv)
 {
-    int i, fd, pid, freq_ctl;
+    int i, fd, pid;
     char pagemap_fn[64];
 
     // Catch all signals possible - it is vital we kill the DMA engine
@@ -281,16 +276,11 @@ main(int argc, char **argv)
         sa.sa_handler = terminate;
         sigaction(i, &sa, NULL);
     }
-
-    // Calculate the frequency control word
-    // The fractional part is stored in the lower 12 bits
-    freq_ctl = ((float)(PLLFREQ / CARRIERFREQ)) * ( 1 << 12 );
         
     dma_reg = map_peripheral(DMA_BASE, DMA_LEN);
     pwm_reg = map_peripheral(PWM_BASE, PWM_LEN);
     clk_reg = map_peripheral(CLK_BASE, CLK_LEN);
     gpio_reg = map_peripheral(GPIO_BASE, GPIO_LEN);
-    pm_reg = map_peripheral(PM_BASE, PM_LEN);
 
     virtbase = mmap(NULL, NUM_PAGES * PAGE_SIZE, PROT_READ|PROT_WRITE,
             MAP_SHARED|MAP_ANONYMOUS|MAP_NORESERVE|MAP_LOCKED,
@@ -336,6 +326,14 @@ main(int argc, char **argv)
     dma_cb_t *cbp = ctl->cb;
     uint32_t phys_sample_dst = 0x7e101074;
     uint32_t phys_pwm_fifo_addr = 0x7e20c000 + 0x18;
+
+
+    uint32_t carrier_freq = 107900000;
+
+    // Calculate the frequency control word
+    // The fractional part is stored in the lower 12 bits
+    uint32_t freq_ctl = ((float)(PLLFREQ / carrier_freq)) * ( 1 << 12 );
+
 
     for (i = 0; i < NUM_SAMPLES; i++) {
         ctl->sample[i] = 0x5a << 24 | freq_ctl;    // Silence
@@ -390,10 +388,6 @@ main(int argc, char **argv)
     pwm_reg[PWM_CTL] = PWMCTL_USEF1 | PWMCTL_PWEN1;
     udelay(10);
     
-    // set output drive strength to 16 mA
-    // see http://fr.scribd.com/doc/101830961/GPIO-Pads-Control2
-    pm_reg[PM_PADS2] = 0x5A000000 | 7;
-    
 
     // Initialise the DMA
     dma_reg[DMA_CS] = BCM2708_DMA_RESET;
@@ -403,36 +397,57 @@ main(int argc, char **argv)
     dma_reg[DMA_DEBUG] = 7; // clear debug error flags
     dma_reg[DMA_CS] = 0x10880001;    // go, mid priority, wait for outstanding writes
 
-    // Nearly there.. open the .wav file specified on the cmdline
+    
+    // Try to read audio samples from a .wav file
     fd = 0;
-
+    short data[1024];
+    int data_len = 0;
+        
     if (argc > 1) {
-            fd = open(argv[1], 'r');
+        fd = open(argv[1], 'r');
 
-        if (fd < 0)
-            fatal("Failed to open .wav file\n");
+        data_len = read(fd, data, 22);
+        if (data_len < 22)
+            fatal("Failed to read .wav file\n");
+        data_len = 0;        
     }
 
-    short data[1024];
-    int data_len = read(fd, data, sizeof(data));
-    if (data_len < 0)
-        fatal("Failed to read .wav file\n");
-    data_len /= 2;
-    if (data_len < 23)
-        fatal("Initial read of .wav file too short\n");
+
 
     uint32_t last_cb = (uint32_t)ctl->cb;
-    int data_index = 22;
+    int data_index = 0;
 
     float rds_data[RDS_DATA_SIZE];
     int rds_index = sizeof(rds_data);
     
-    set_rds_params(0x2345, "Hello");
+    char ps[9] = {0};
+    set_rds_pi(0x2345);
+    set_rds_rt("RPi-Live - Live RDS transmission from the Raspberry Pi!");
+    uint16_t count = 0;
+    uint16_t count2 = 0;
     
     printf("Starting to transmit\n");
 
+    int do_tune = 1;
+    int tune_on = 1;
+    uint8_t tune_idx = 0;
+    uint32_t tune_cycle_counter = 0;
+    float tune_level = 1;
+
     for (;;) {
-        usleep(1000);
+        if(count == 512) {
+            snprintf(ps, 9, "%08d", count2);
+            set_rds_ps(ps);
+            count2++;
+        }
+        if(count == 1024) {
+            set_rds_ps("RPi-Live");
+            count = 0;
+        }
+        count++;
+        
+        
+        usleep(5000);
 
         uint32_t cur_cb = mem_phys_to_virt(dma_reg[DMA_CONBLK_AD]);
         int last_sample = (last_cb - (uint32_t)virtbase) / (sizeof(dma_cb_t) * 2);
@@ -443,38 +458,61 @@ main(int argc, char **argv)
             free_slots += NUM_SAMPLES;
 
         while (free_slots >= SUBSIZE) {
+            // generate RDS samples if necessary
             if(rds_index >= RDS_DATA_SIZE) {
                 get_rds_samples(rds_data, RDS_DATA_SIZE);
                 rds_index = 0;
             }
-        
-            //float dval = (float)(data[data_index])/65536.0 * DEVIATION;
-            float dval = rds_data[rds_index] / 3. * DEVIATION;
-            rds_index++;
             
-            int intval = (int)((floor)(dval));
-            int frac = (int)((dval - (float)intval) * SUBSIZE);
-            int j;
-
-            // I'm sure this code could do a better job of subsampling, either by
-            // distributing the '+1's evenly across the 10 subsamples, or maybe
-            // by taking the previous and next samples in to account too.
-            for (j = 0; j < SUBSIZE; j++) {
-                ctl->sample[last_sample++] = (0x5A << 24 | freq_ctl) + (frac > j ? intval + 1 : intval);
-                if (last_sample == NUM_SAMPLES)
-                    last_sample = 0;
-            }
-            free_slots -= SUBSIZE;
-            if (++data_index >= data_len) {
-                    data_len = read(fd, data, sizeof(data));
-                data_index = 0;
+            // read samples in the wav file if necessary
+            if(fd && data_len == 0) {
+                data_len = read(fd, data, sizeof(data));
                 if (data_len < 0)
                     fatal("Error reading data: %m\n");
-                // Should really wait for outstanding samples to be processed here..
                 data_len /= 2;
-                if (data_len == 0)
-                    terminate(0);
+                if(data_len == 0) {
+                    lseek(fd, 22, SEEK_SET);
+                }
+                data_index = 0;
             }
+            
+            
+        
+            //float dval = (float)(data[data_index])/65536.0 * DEVIATION;
+            float dval = rds_data[rds_index] * (DEVIATION / 10.);
+            rds_index++;
+
+            // add modulation from a 445 Hz (228000 /2 /256) tune
+            if(do_tune) {
+                if(tune_idx == 0 && tune_on) {
+                    tune_level = 1-tune_level;
+                }
+                dval += tune_level * DEVIATION/5.;
+                tune_idx++;
+            
+                tune_cycle_counter++;
+                if(tune_cycle_counter >= 228000) {
+                    tune_cycle_counter = 0;
+                    tune_on = !tune_on;
+                }
+            }
+            // add modulation from .wav?
+            else if(fd && data_len > 0) {
+                data_index++;
+                data_len--;
+                // do something here
+            }
+
+            int intval = (int)((floor)(dval));
+            //int frac = (int)((dval - (float)intval) * SUBSIZE);
+            //int j;
+
+
+            ctl->sample[last_sample++] = (0x5A << 24 | freq_ctl) + intval; //(frac > j ? intval + 1 : intval);
+            if (last_sample == NUM_SAMPLES)
+                last_sample = 0;
+
+            free_slots -= SUBSIZE;
         }
         last_cb = (uint32_t)virtbase + last_sample * sizeof(dma_cb_t) * 2;
     }

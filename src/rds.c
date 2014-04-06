@@ -23,11 +23,13 @@
 #include <stdio.h>
 #include "waveforms.h"
 
-#define MAX_TEXT_LENGTH 64
+#define RT_LENGTH 64
+#define PS_LENGTH 8
 #define GROUP_LENGTH 4
 
 struct {
-    char text[MAX_TEXT_LENGTH];
+    char ps[PS_LENGTH];
+    char rt[RT_LENGTH];
     uint16_t pi;
 } rds_params;
 
@@ -42,7 +44,7 @@ struct {
 #define BITS_PER_GROUP (GROUP_LENGTH * (BLOCK_SIZE+POLY_DEG))
 #define SAMPLES_PER_BIT 192
 #define FILTER_SIZE (sizeof(waveform_biphase)/sizeof(float))
-#define SAMPLE_BUFFER_SIZE (8*SAMPLES_PER_BIT)
+#define SAMPLE_BUFFER_SIZE (SAMPLES_PER_BIT + FILTER_SIZE)
 
 
 uint16_t offset_words[] = {0x0FC, 0x198, 0x168, 0x1B4};
@@ -82,13 +84,13 @@ void get_rds_group(int *buffer) {
     if(state < 4) {
         blocks[1] = 0x0000 | ps_state;
         blocks[2] = 0xCDCD;     // no AF
-        blocks[3] = rds_params.text[ps_state*2]<<8 | rds_params.text[ps_state*2+1];
+        blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
         ps_state++;
         if(ps_state >= 4) ps_state = 0;
     } else { // state == 5
         blocks[1] = 0x2000 | rt_state;
-        blocks[2] = rds_params.text[rt_state*4+0]<<8 | rds_params.text[rt_state*4+1];
-        blocks[3] = rds_params.text[rt_state*4+2]<<8 | rds_params.text[rt_state*4+3];
+        blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
+        blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
         rt_state++;
         if(rt_state >= 16) rt_state = 0;
     }
@@ -145,38 +147,23 @@ void get_rds_samples(float *buffer, int count) {
             
             inverting = (cur_output == 1);
 
-            /*
-            // zero out last bit
-            int idx = in_sample_index-1;
-            printf("  Wipe: %d -> ", idx);
-            
-            for(int j=0; j<SAMPLES_PER_BIT; j++) {
-                if(idx<0) idx = SAMPLE_BUFFER_SIZE-1;
-                sample_buffer[idx] = 0;
-                idx--;
-            }
-            printf("%d\n", idx+1);
-            */
-
             float *src = waveform_biphase;
             int idx = in_sample_index;
-            //printf("In: %d -> ", idx);
+
             for(int j=0; j<FILTER_SIZE; j++) {
                 float val = (*src++);
                 if(inverting) val = -val;
                 sample_buffer[idx++] += val;
                 if(idx >= SAMPLE_BUFFER_SIZE) idx = 0;
             }
-            //printf("%d\n", idx-1);
+
             in_sample_index += SAMPLES_PER_BIT;
             if(in_sample_index >= SAMPLE_BUFFER_SIZE) in_sample_index -= SAMPLE_BUFFER_SIZE;
             
             bit_pos++;
             sample_count = 0;
-            //printf("%d", cur_bit); fflush(stdout);
         }
         
-        //printf("[%d]", out_sample_index);
         float sample = sample_buffer[out_sample_index];
         sample_buffer[out_sample_index] = 0;
         out_sample_index++;
@@ -199,8 +186,15 @@ void get_rds_samples(float *buffer, int count) {
     }
 }
 
-void set_rds_params(uint16_t pi_code, char *text) {
+void set_rds_pi(uint16_t pi_code) {
     rds_params.pi = pi_code;
-    
-    strncpy(rds_params.text, text, 64);
+
+}
+
+void set_rds_rt(char *rt) {
+    strncpy(rds_params.rt, rt, 64);
+}
+
+void set_rds_ps(char *ps) {
+    strncpy(rds_params.ps, ps, 8);
 }
