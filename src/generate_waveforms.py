@@ -61,9 +61,9 @@ def generate_bit(name):
 
    
     out = shapedSamples[528-288:528+288] #[offset:offset+l*count]
-    plt.plot(sf)
-    plt.plot(out)
-    plt.show()
+    #plt.plot(sf)
+    #plt.plot(out)
+    #plt.show()
 
     iout = (out * 20000./max(abs(out)) ).astype(numpy.dtype('>i2'))
     wavfile.write(u"waveform_{}.wav".format(name), sample_rate, iout)
