@@ -24,11 +24,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <sndfile.h>
 
 #include "rds.h"
+#include "fm_mpx.h"
+
 
 #define LENGTH 114000
+
 
 /* Simple test program */
 int main(int argc, char **argv) {
@@ -42,11 +46,14 @@ int main(int argc, char **argv) {
     set_rds_ps(argv[2]);
     set_rds_rt(argv[2]);
     
-    float buffer[LENGTH];
+    fm_mpx_open("sound_22050.wav");
+    
+
     
     // Set the format of the output file
     SNDFILE *outf;
     SF_INFO sfinfo;
+
     sfinfo.frames = LENGTH;
     sfinfo.samplerate = 228000;
     sfinfo.channels = 1;
@@ -60,11 +67,12 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    float mpx_buffer[LENGTH];
 
     for(int j=0; j<40; j++) {
-        get_rds_samples(buffer, LENGTH);
+        fm_mpx_get_samples(mpx_buffer);
 
-        if(sf_write_float(outf, buffer, LENGTH) != LENGTH) {
+        if(sf_write_float(outf, mpx_buffer, LENGTH) != LENGTH) {
             fprintf(stderr, "Error: writing to file %s.\n", argv[1]);
             return EXIT_FAILURE;
         }
@@ -74,5 +82,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: closing file %s.\n", argv[1]);
     }
     
+    fm_mpx_close();
+
     return EXIT_SUCCESS;
 }

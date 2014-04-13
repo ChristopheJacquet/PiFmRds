@@ -3,6 +3,9 @@
     Copyright (C) 2014 Christophe Jacquet, F8FTK
     
     See https://github.com/ChristopheJacquet/PiFmRds
+    
+    rds_wav.c is a test program that writes a RDS baseband signal to a WAV
+    file. It requires libsndfile.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,16 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef RDS_H
-#define RDS_H
-
-
-#include <stdint.h>
-
-extern void get_rds_samples(float *buffer, int count);
-extern void set_rds_pi(uint16_t pi_code);
-extern void set_rds_rt(char *rt);
-extern void set_rds_ps(char *ps);
-
-
-#endif /* RDS_H */
+extern int fm_mpx_open(char *filename);
+extern int fm_mpx_get_samples(float *mpx_buffer);
+extern int fm_mpx_close();
