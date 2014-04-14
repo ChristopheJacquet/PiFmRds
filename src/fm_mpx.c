@@ -224,7 +224,7 @@ int fm_mpx_get_samples(float *mpx_buffer) {
         if(channels>1) {
             mpx_buffer[i] +=
                 4.05 * carrier_38[phase_38] * out_stereo + // Stereo difference signal
-                .09*carrier_19[phase_19];                  // Stereo pilot tone
+                .9*carrier_19[phase_19];                  // Stereo pilot tone
 
             phase_19++;
             phase_38++;
