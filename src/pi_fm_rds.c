@@ -100,6 +100,7 @@
 #include <sndfile.h>
 
 #include "rds.h"
+#include "fm_mpx.h"
 
 
 #define NUM_SAMPLES        50000
@@ -202,6 +203,9 @@ terminate(int dummy)
         dma_reg[DMA_CS] = BCM2708_DMA_RESET;
         udelay(10);
     }
+    
+    fm_mpx_close();
+    
     exit(1);
 }
 
@@ -259,11 +263,10 @@ map_peripheral(uint32_t base, uint32_t len)
 
 
 #define SUBSIZE 1
-#define RDS_DATA_SIZE 5000
-#define DATA_SIZE 10000
+#define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int16_t ppm) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -407,14 +410,13 @@ int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int1
     
     uint32_t last_cb = (uint32_t)ctl->cb;
 
-    // Data structures for sound data
+    // Data structures for baseband data
     float data[DATA_SIZE];
     int data_len = 0;
     int data_index = 0;
 
-    // Data structures for RDS data
-    float rds_data[RDS_DATA_SIZE];
-    int rds_index = sizeof(rds_data);
+    // Initialize the baseband generator
+    fm_mpx_open(audio_file, DATA_SIZE);
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -442,7 +444,7 @@ int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int1
                 count2++;
             }
             if(count == 1024) {
-                set_rds_ps("Pi-FmRds");
+                set_rds_ps("RPi-Live");
                 count = 0;
             }
             count++;
@@ -459,39 +461,16 @@ int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int1
             free_slots += NUM_SAMPLES;
 
         while (free_slots >= SUBSIZE) {
-            // generate RDS samples if necessary
-            if(rds_index >= RDS_DATA_SIZE) {
-                get_rds_samples(rds_data, RDS_DATA_SIZE);
-                rds_index = 0;
-            }
-            
-            // read samples in the wav file if necessary
-            if(sf && data_len == 0) {
-                for(int j=0; j<2; j++) { // one retry
-                    data_len = sf_read_float(sf, data, DATA_SIZE);
-                    if (data_len < 0)
-                        fatal("Error reading data: %m\n");
-                    if(data_len == 0) {
-                        sf_seek(sf, 0, SEEK_SET);
-                    } else {
-                        break;
-                    }
-                }
+            // get more baseband samples if necessary
+            if(data_len == 0) {
+                fm_mpx_get_samples(data);
+                data_len = DATA_SIZE;
                 data_index = 0;
             }
             
-            
-        
-            //float dval = (float)(data[data_index])/65536.0 * DEVIATION;
-            float dval = rds_data[rds_index] * (DEVIATION / 10.);
-            rds_index++;
-
-            // add modulation from .wav?
-            if(sf && data_len > 0) {
-                dval += data[data_index] * DEVIATION/2;
-                data_index++;
-                data_len--;
-            }
+            float dval = data[data_index] * (DEVIATION / 10.);
+            data_index++;
+            data_len--;
 
             int intval = (int)((floor)(dval));
             //int frac = (int)((dval - (float)intval) * SUBSIZE);
@@ -513,7 +492,7 @@ int tx(uint32_t carrier_freq, SNDFILE *sf, uint16_t pi, char *ps, char *rt, int1
 
 
 int main(int argc, char **argv) {
-    SNDFILE *sf = NULL;
+    char *audio_file = NULL;
     uint32_t carrier_freq = 107900000;
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
@@ -530,12 +509,7 @@ int main(int argc, char **argv) {
             i++;
             // Try to read audio samples from a .wav file
             printf("Using .wav file: %s\n", param);
-            SF_INFO info;
-            sf = sf_open(param,SFM_READ,&info);
-            if(sf == NULL)
-                fatal("Failed to read .wav file\n");
-            if(info.samplerate != 228000)
-                fatal("Sample rate must be 228 kHz\n");
+            audio_file = param;
         } else if(strcmp("-freq", arg)==0 && param != NULL) {
             i++;
             carrier_freq = 1e6 * atof(param);
@@ -559,5 +533,5 @@ int main(int argc, char **argv) {
         }
     }
     
-    tx(carrier_freq, sf, pi, ps, rt, ppm);
+    tx(carrier_freq, audio_file, pi, ps, rt, ppm);
 }

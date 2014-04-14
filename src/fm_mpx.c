@@ -245,7 +245,7 @@ int fm_mpx_close() {
         fprintf(stderr, "Error closing audio file");
     }
     
-    free(audio_buffer);
+    if(audio_buffer != NULL) free(audio_buffer);
     
     return 0;
 }

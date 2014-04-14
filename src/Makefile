@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -std=gnu99 -c -g -O2
 
-app: rds.o waveforms.o pi_fm_rds.o
-	$(CC) -o pi_fm_rds rds.o waveforms.o pi_fm_rds.o -lm -lsndfile
+app: rds.o waveforms.o pi_fm_rds.o fm_mpx.o
+	$(CC) -o pi_fm_rds rds.o waveforms.o pi_fm_rds.o fm_mpx.o -lm -lsndfile
 
 rds_wav: rds.o waveforms.o rds_wav.o fm_mpx.o
 	$(CC) -o rds_wav rds_wav.o rds.o waveforms.o fm_mpx.o -lm -lsndfile
