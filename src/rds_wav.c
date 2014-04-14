@@ -36,17 +36,20 @@
 
 /* Simple test program */
 int main(int argc, char **argv) {
-    if(argc < 3) {
+    if(argc < 4) {
         fprintf(stderr, "Error: missing argument.\n");
-        fprintf(stderr, "Syntax: rds_wav <out.wav> <text>\n");
+        fprintf(stderr, "Syntax: rds_wav <in_file> <out.wav> <text>\n");
         return EXIT_FAILURE;
     }
     
     set_rds_pi(0x1234);
-    set_rds_ps(argv[2]);
-    set_rds_rt(argv[2]);
+    set_rds_ps(argv[3]);
+    set_rds_rt(argv[3]);
     
-    fm_mpx_open("sound_22050.wav");
+    if(fm_mpx_open(argv[1], LENGTH) != 0) {
+        printf("Could not setup FM mulitplex generator.\n");
+        return EXIT_FAILURE;
+    }
     
 
     
@@ -62,8 +65,8 @@ int main(int argc, char **argv) {
     sfinfo.seekable = 0;
     
     // Open the output file
-    if (! (outf = sf_open(argv[1], SFM_WRITE, &sfinfo))) {
-        fprintf(stderr, "Error: could not open output file %s.\n", argv[1]) ;
+    if (! (outf = sf_open(argv[2], SFM_WRITE, &sfinfo))) {
+        fprintf(stderr, "Error: could not open output file %s.\n", argv[2]) ;
         return EXIT_FAILURE;
     }
 
@@ -71,6 +74,11 @@ int main(int argc, char **argv) {
 
     for(int j=0; j<40; j++) {
         fm_mpx_get_samples(mpx_buffer);
+        
+        // scale samples
+        for(int i=0; i<LENGTH; i++) {
+            mpx_buffer[i] /= 10.;
+        }
 
         if(sf_write_float(outf, mpx_buffer, LENGTH) != LENGTH) {
             fprintf(stderr, "Error: writing to file %s.\n", argv[1]);
