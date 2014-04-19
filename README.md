@@ -99,8 +99,8 @@ Reception works perfectly with all the devices above. RDS Surveyor reports no gr
 CPU usage is as follows:
 
 * without audio: 9%
-* with mono audio: 42%
-* with stereo audio: 54%
+* with mono audio: 33%
+* with stereo audio: 40%
 
 CPU usage increases dramatically when adding audio because the program has to upsample the (unspecified) sample rate of the input audio file to 228 kHz, its internal operating sample rate. Doing so, it has to apply an FIR filter, which is costly.
 
