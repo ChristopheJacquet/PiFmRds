@@ -1,5 +1,14 @@
 CC = gcc
-CFLAGS = -Wall -std=gnu99 -c -g -O3 -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math
+STD_CFLAGS = -Wall -std=gnu99 -c -g -O3
+
+# Enable ARM-specific options only on ARM
+UNAME := $(shell uname -m)
+
+ifeq ($(UNAME), armv6l)
+	CFLAGS = $(STD_CFLAGS) -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math
+else
+	CFLAGS = $(STD_CFLAGS)
+endif
 
 app: rds.o waveforms.o pi_fm_rds.o fm_mpx.o
 	$(CC) -o pi_fm_rds rds.o waveforms.o pi_fm_rds.o fm_mpx.o -lm -lsndfile
