@@ -70,7 +70,7 @@ One way to measure the ppm error is to play the `pulses.wav` file: it will play 
 
 ### Piping audio into Pi-FM-RDS
 
-If you use the argument `-audio -`, Pi-FM-RDS reads audio data on standard input. This allows to pipe the output of a program into Pi-FM-RDS. For instance, this can be used to read MP3 files using Sox:
+If you use the argument `-audio -`, Pi-FM-RDS reads audio data on standard input. This allows you to pipe the output of a program into Pi-FM-RDS. For instance, this can be used to read MP3 files using Sox:
 
 ```
 sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./pi_fm_rds -audio -
@@ -139,6 +139,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-04-28: support piping audio file data to Pi-FM-RDS' standard input
 * 2014-04-14: new release that supports any sample rate for the audio input, and that can generate a proper FM-Stereo signal if a stereophonic input file is provided
 * 2014-04-06: initial release, which only supported 228 kHz monophonic audio input files
 
