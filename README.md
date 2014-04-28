@@ -33,10 +33,10 @@ sudo ./pi_fm_rds
 This will generate an FM transmission on 107.9 MHz, with default station name (PS), radiotext (RT) and PI-code, without audio. The radiofrequency signal is emitted on GPIO 4 (pin 7 on header P1).
 
 
-You can add monophonic or stereophonic audio by referencing a WAV file as follows:
+You can add monophonic or stereophonic audio by referencing an audio file as follows:
 
 ```
-sudo ./pi_fm_rds -wav sound.wav
+sudo ./pi_fm_rds -audio sound.wav
 ```
 
 To test stereophonic audio, you can try the file `stereo_44100.wav` provided.
@@ -44,13 +44,13 @@ To test stereophonic audio, you can try the file `stereo_44100.wav` provided.
 The more general syntax for running Pi-FM-RDS is as follows:
 
 ```
-pi_fm_rds [-freq freq] [-wav file.wav] [-ppm ppm_error] [-pi pi_code] [-ps ps_text] [-rt rt_text]
+pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code] [-ps ps_text] [-rt rt_text]
 ```
 
 All arguments are optional:
 
 * `-freq` specifies the carrier frequency (in MHz). Example: `-freq 107.9`.
-* `-wav` specifies a WAV file to play as audio. The sample rate does not matter: Pi-FM-RDS will resample and filter it. If a stereo file is provided, Pi-FM-RDS will produce an FM-Stereo signal. Example: `-wav sound.wav`.
+* `-audio` specifies an audio file to play as audio. The sample rate does not matter: Pi-FM-RDS will resample and filter it. If a stereo file is provided, Pi-FM-RDS will produce an FM-Stereo signal. Example: `-audio sound.wav`. The supported formats depend on `libsndfile`. This includes WAV and Ogg/Vorbis (among others) but not MP3. Specify `-` as the file name to read audio data on standard input (useful for piping audio into Pi-FM-RDS, see below).
 * `-pi` specifies the PI-code of the RDS broadcast. 4 hexadecimal digits. Example: `-pi FFFF`.
 * `-ps` specifies the station name (Program Service name, PS) of the RDS broadcast. Limit: 8 characters. Example: `-ps RASP-PI`.
 * `-rt` specifies the radiotext (RT) to be transmitted. Limit: 64 characters. Example: `-rt 'Hello, world!'`.
@@ -66,6 +66,15 @@ The RDS standards states that the error for the 57 kHz subcarrier must be less t
 In practice, I found that Pi-FM-RDS works okay even without using the `-ppm` parameter. I suppose the receiver are more tolerant than stated in the RDS spec.
 
 One way to measure the ppm error is to play the `pulses.wav` file: it will play a pulse for precisely 1 second, then play a 1-second silence, and so on. Record the audio output from a radio with a good audio card. Say you sample at 44.1 kHz. Measure 10 intervals. Using [Audacity](http://audacity.sourceforge.net/) for example determine the number of samples of these 10 intervals: in the absence of clock error, it should be 441,000 samples. With my Pi, I found 441,132 samples. Therefore, my ppm error is (441132-441000)/441000 * 1e6 = 299 ppm, **assuming that my sampling device (audio card) has no clock error...**
+
+
+### Piping audio into Pi-FM-RDS
+
+If you use the argument `-audio -`, Pi-FM-RDS reads audio data on standard input. This allows to pipe the output of a program into Pi-FM-RDS. For instance, this can be used to read MP3 files using Sox:
+
+```
+sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./pi_fm_rds -audio -
+```
 
 
 ## Warning and Diclaimer

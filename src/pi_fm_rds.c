@@ -416,7 +416,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    fm_mpx_open(audio_file, DATA_SIZE);
+    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return -1;
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -505,10 +505,8 @@ int main(int argc, char **argv) {
         
         if(arg[0] == '-' && i+1 < argc) param = argv[i+1];
         
-        if(strcmp("-wav", arg)==0 && param != NULL) {
+        if((strcmp("-wav", arg)==0 || strcmp("-audio", arg)==0) && param != NULL) {
             i++;
-            // Try to read audio samples from a .wav file
-            printf("Using .wav file: %s\n", param);
             audio_file = param;
         } else if(strcmp("-freq", arg)==0 && param != NULL) {
             i++;
@@ -529,7 +527,7 @@ int main(int argc, char **argv) {
             ppm = atoi(param);
         } else {
             fatal("Unrecognised argument: %s\n"
-            "Syntax: pi_fm_rds [-freq freq] [-wav file.wav] [-ppm ppm_error] [-pi pi_code] [-ps ps_text] [-rt rt_text]\n", arg);
+            "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code] [-ps ps_text] [-rt rt_text]\n", arg);
         }
     }
     

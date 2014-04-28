@@ -86,12 +86,24 @@ int fm_mpx_open(char *filename, size_t len) {
     if(filename != NULL) {
         // Open the input file
         SF_INFO sfinfo;
-        if(! (inf = sf_open(filename, SFM_READ, &sfinfo))) {
-            fprintf(stderr, "Error: could not open input file %s.\n", filename) ;
-            return -1;
+ 
+        // stdin or file on the filesystem?
+        if(filename[0] == '-') {
+            if(! (inf = sf_open_fd(fileno(stdin), SFM_READ, &sfinfo, 0))) {
+                fprintf(stderr, "Error: could not open stdin for audio input.\n") ;
+                return -1;
+            } else {
+                printf("Using stdin for audio input.\n");
+            }
+        } else {
+            if(! (inf = sf_open(filename, SFM_READ, &sfinfo))) {
+                fprintf(stderr, "Error: could not open input file %s.\n", filename) ;
+                return -1;
+            } else {
+                printf("Using audio file: %s\n", filename);
+            }
         }
-        
-    
+            
         int in_samplerate = sfinfo.samplerate;
         downsample_factor = 228000. / in_samplerate;
     
