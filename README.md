@@ -78,7 +78,7 @@ sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./p
 ```
 
 
-### Changing PS and RT run-time
+### Changing PS and RT at run-time
 
 You can control PS and RT at run-time using a named pipe (FIFO). For this run Pi-FM-RDS with the `-ctl` argument.
 
@@ -89,7 +89,7 @@ mkfifo rds_ctl
 sudo ./pi_fm_rds -ctl rds_ctl
 ```
 
-Then you can send “commands” to change the PS and RT:
+Then you can send “commands” to change PS and RT:
 
 ```
 cat >rds_ctl
