@@ -54,6 +54,7 @@ All arguments are optional:
 * `-pi` specifies the PI-code of the RDS broadcast. 4 hexadecimal digits. Example: `-pi FFFF`.
 * `-ps` specifies the station name (Program Service name, PS) of the RDS broadcast. Limit: 8 characters. Example: `-ps RASP-PI`.
 * `-rt` specifies the radiotext (RT) to be transmitted. Limit: 64 characters. Example: `-rt 'Hello, world!'`.
+* `-ctl` specifies a named pipe (FIFO) to use as a control channel to change PS and RT at run-time (see below).
 * `-ppm` specifies your Raspberry Pi's oscillator error in parts per million (ppm), see below.
 
 By default the PS changes back and forth between `Pi-FmRds` and a sequence number, starting at `00000000`. The PS changes around one time per second.
@@ -75,6 +76,29 @@ If you use the argument `-audio -`, Pi-FM-RDS reads audio data on standard input
 ```
 sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./pi_fm_rds -audio -
 ```
+
+
+### Setting PS and RT dynamically at run-time
+
+You can control PS and RT at run-time using a named pipe (FIFO). For this run Pi-FM-RDS with the `-ctl` argument.
+
+Example:
+
+```
+mkfifo rds_ctl
+sudo ./pi_fm_rds -ctl rds_ctl
+```
+
+Then you can send “commands” to change the PS and RT:
+
+```
+cat >rds_ctl
+PS MyText
+RT A text to be sent as radiotext
+PS OtherTxt
+...
+```
+
 
 
 ## Warning and Diclaimer
