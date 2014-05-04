@@ -78,7 +78,7 @@ sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./p
 ```
 
 
-### Setting PS and RT dynamically at run-time
+### Changing PS and RT run-time
 
 You can control PS and RT at run-time using a named pipe (FIFO). For this run Pi-FM-RDS with the `-ctl` argument.
 
@@ -99,6 +99,7 @@ PS OtherTxt
 ...
 ```
 
+Every line must start with either `PS` or `RT`, followed by one space character, and the desired value. Any other line format is silently ignored.
 
 
 ## Warning and Diclaimer
@@ -163,6 +164,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-05-04: possibility to change PS and RT at run-time
 * 2014-04-28: support piping audio file data to Pi-FM-RDS' standard input
 * 2014-04-14: new release that supports any sample rate for the audio input, and that can generate a proper FM-Stereo signal if a stereophonic input file is provided
 * 2014-04-06: initial release, which only supported 228 kHz monophonic audio input files
