@@ -102,7 +102,7 @@ int get_rds_ct_group(uint16_t *blocks) {
         blocks[3] |= abs(offset);
         if(offset < 0) blocks[3] |= 0x20;
         
-        printf("Generated CT: %04X %04X %04X\n", blocks[1], blocks[2], blocks[3]);
+        //printf("Generated CT: %04X %04X %04X\n", blocks[1], blocks[2], blocks[3]);
         return 1;
     } else return 0;
 }
