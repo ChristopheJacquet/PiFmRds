@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 #include "waveforms.h"
 
 #define RT_LENGTH 64
@@ -68,6 +70,42 @@ uint16_t crc(uint16_t block) {
     return crc;
 }
 
+/* Possibly generates a CT (clock time) group if the minute has just changed
+   Returns 1 if the CT group was generated, 0 otherwise
+*/
+int get_rds_ct_group(uint16_t *blocks) {
+    static int latest_minutes = -1;
+
+    // Check time
+    time_t now;
+    struct tm *utc;
+    
+    now = time (NULL);
+    utc = gmtime (&now);
+
+    if(utc->tm_min != latest_minutes) {
+        // Generate CT group
+        latest_minutes = utc->tm_min;
+        
+        int l = utc->tm_mon <= 1 ? 1 : 0;
+        int mjd = 14956 + utc->tm_mday + 
+                        (int)((utc->tm_year - l) * 365.25) +
+                        (int)((utc->tm_mon + 2 + l*12) * 30.6001);
+        
+        blocks[1] = 0x4000 | (mjd>>15);
+        blocks[2] = (mjd<<1) | (utc->tm_hour>>4);
+        blocks[3] = (utc->tm_hour & 0xF)<<12 | utc->tm_min<<6;
+        
+        utc = localtime(&now);
+        
+        int offset = utc->tm_gmtoff / (30 * 60);
+        blocks[3] |= abs(offset);
+        if(offset < 0) blocks[3] |= 0x20;
+        
+        printf("Generated CT: %04X %04X %04X\n", blocks[1], blocks[2], blocks[3]);
+        return 1;
+    } else return 0;
+}
 
 /* Creates an RDS group. This generates sequences of the form 0B, 0B, 0B, 0B, 2A, etc.
    The pattern is of length 5, the variable 'state' keeps track of where we are in the
@@ -81,22 +119,24 @@ void get_rds_group(int *buffer) {
     uint16_t blocks[GROUP_LENGTH] = {rds_params.pi, 0, 0, 0};
     
     // Generate block content
-    if(state < 4) {
-        blocks[1] = 0x0000 | ps_state;
-        blocks[2] = 0xCDCD;     // no AF
-        blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
-        ps_state++;
-        if(ps_state >= 4) ps_state = 0;
-    } else { // state == 5
-        blocks[1] = 0x2000 | rt_state;
-        blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
-        blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
-        rt_state++;
-        if(rt_state >= 16) rt_state = 0;
-    }
+    if(! get_rds_ct_group(blocks)) { // CT (clock time) has priority on other group types
+        if(state < 4) {
+            blocks[1] = 0x0000 | ps_state;
+            blocks[2] = 0xCDCD;     // no AF
+            blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
+            ps_state++;
+            if(ps_state >= 4) ps_state = 0;
+        } else { // state == 5
+            blocks[1] = 0x2000 | rt_state;
+            blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
+            blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
+            rt_state++;
+            if(rt_state >= 16) rt_state = 0;
+        }
     
-    state++;
-    if(state >= 5) state = 0;
+        state++;
+        if(state >= 5) state = 0;
+    }
     
     // Calculate the checkword for each block and emit the bits
     for(int i=0; i<GROUP_LENGTH; i++) {
