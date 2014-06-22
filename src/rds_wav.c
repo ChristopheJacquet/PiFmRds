@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sndfile.h>
+#include <strings.h>
 
 #include "rds.h"
 #include "fm_mpx.h"
@@ -38,7 +39,7 @@
 int main(int argc, char **argv) {
     if(argc < 4) {
         fprintf(stderr, "Error: missing argument.\n");
-        fprintf(stderr, "Syntax: rds_wav <in_file> <out.wav> <text>\n");
+        fprintf(stderr, "Syntax: rds_wav <in_audio.wav> <out_mpx.wav> <text>\n");
         return EXIT_FAILURE;
     }
     
@@ -77,7 +78,7 @@ int main(int argc, char **argv) {
     float mpx_buffer[LENGTH];
 
     for(int j=0; j<40; j++) {
-        fm_mpx_get_samples(mpx_buffer);
+        if( fm_mpx_get_samples(mpx_buffer) < 0 ) break;
         
         // scale samples
         for(int i=0; i<LENGTH; i++) {

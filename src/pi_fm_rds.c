@@ -483,7 +483,9 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         while (free_slots >= SUBSIZE) {
             // get more baseband samples if necessary
             if(data_len == 0) {
-                fm_mpx_get_samples(data);
+                if( fm_mpx_get_samples(data) < 0 ) {
+                    terminate(0);
+                }
                 data_len = DATA_SIZE;
                 data_index = 0;
             }
