@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sndfile.h>
-#include <strings.h>
+#include <string.h>
 
 #include "rds.h"
 #include "fm_mpx.h"
