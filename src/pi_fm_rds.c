@@ -490,7 +490,7 @@ int tx(uint32_t carrier_freq, uint32_t volume, char *audio_file, uint16_t pi, ch
                 data_index = 0;
             }
             
-            float dval = data[data_index] * (DEVIATION / 10.) * volume;
+            float dval = data[data_index] * (DEVIATION / 10.) * (volume/100);
             data_index++;
             data_len--;
 
@@ -517,7 +517,7 @@ int main(int argc, char **argv) {
     char *audio_file = NULL;
     char *control_pipe = NULL;
     uint32_t carrier_freq = 107900000;
-    uint32_t volume = 1;
+    uint32_t volume = 100;
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
