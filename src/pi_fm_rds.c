@@ -269,7 +269,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, uint32_t volume, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, float volume, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm, char *control_pipe) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -517,7 +517,7 @@ int main(int argc, char **argv) {
     char *audio_file = NULL;
     char *control_pipe = NULL;
     uint32_t carrier_freq = 107900000;
-    uint32_t volume = 100;
+    float volume = 100;
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
@@ -542,6 +542,8 @@ int main(int argc, char **argv) {
         }  else if(strcmp("-vol", arg)==0 && param != NULL) {
             i++;
             volume = atof(param);
+            if(volume < 0)
+                fatal("Incorrect volume specification. Must be positive\n");
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
             pi = (uint16_t) strtol(param, NULL, 16);
