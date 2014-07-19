@@ -269,7 +269,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, uint32_t volume, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm, char *control_pipe) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -490,7 +490,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
                 data_index = 0;
             }
             
-            float dval = data[data_index] * (DEVIATION / 10.);
+            float dval = data[data_index] * (DEVIATION / 10.) * volume;
             data_index++;
             data_len--;
 
@@ -517,6 +517,7 @@ int main(int argc, char **argv) {
     char *audio_file = NULL;
     char *control_pipe = NULL;
     uint32_t carrier_freq = 107900000;
+    uint32_t volume = 1;
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
@@ -538,6 +539,9 @@ int main(int argc, char **argv) {
             carrier_freq = 1e6 * atof(param);
             if(carrier_freq < 87500000 || carrier_freq > 108000000)
                 fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
+        }  else if(strcmp("-vol", arg)==0 && param != NULL) {
+            i++;
+            volume = atof(param);
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
             pi = (uint16_t) strtol(param, NULL, 16);
@@ -555,10 +559,10 @@ int main(int argc, char **argv) {
             control_pipe = param;
         } else {
             fatal("Unrecognised argument: %s\n"
-            "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
+            "Syntax: pi_fm_rds [-freq freq] [-vol volume] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
             "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
         }
     }
     
-    tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    tx(carrier_freq, volume, audio_file, pi, ps, rt, ppm, control_pipe);
 }
