@@ -269,7 +269,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, int16_t ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -380,7 +380,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     uint32_t idivider = (uint32_t) divider;
     uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
     
-    printf("ppm corr is %d, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912]\n", 
+    printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912]\n", 
                 ppm, divider, idivider, fdivider);
 
     pwm_reg[PWM_CTL] = 0;
@@ -520,7 +520,7 @@ int main(int argc, char **argv) {
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
-    int16_t ppm = 0;
+    float ppm = 0;
     
     
     // Parse command-line arguments
@@ -549,7 +549,7 @@ int main(int argc, char **argv) {
             rt = param;
         } else if(strcmp("-ppm", arg)==0 && param != NULL) {
             i++;
-            ppm = atoi(param);
+            ppm = atof(param);
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
