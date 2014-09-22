@@ -419,7 +419,10 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return -1;
+	if (fm_mpx_open(audio_file, DATA_SIZE) < 0) {
+		terminate(0);
+		return -1;
+	}
     
     // Initialize the RDS modulator
     char myps[9] = {0};
