@@ -89,6 +89,11 @@ int fm_mpx_open(char *filename, size_t len) {
  
         // stdin or file on the filesystem?
         if(filename[0] == '-') {
+            //Add MPD pipe support
+            sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+            sfinfo.samplerate = 44100;
+            sfinfo.channels = 2;
+            
             if(! (inf = sf_open_fd(fileno(stdin), SFM_READ, &sfinfo, 0))) {
                 fprintf(stderr, "Error: could not open stdin for audio input.\n") ;
                 return -1;
