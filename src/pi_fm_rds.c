@@ -198,7 +198,7 @@ udelay(int us)
 }
 
 static void
-terminate(int dummy)
+terminate(int num)
 {
     if (dma_reg) {
         dma_reg[DMA_CS] = BCM2708_DMA_RESET;
@@ -208,7 +208,9 @@ terminate(int dummy)
     fm_mpx_close();
     close_control_pipe();
     
-    exit(1);
+    printf("Terminating: cleanly deactivated the DMA engine.\n");
+    
+    exit(num);
 }
 
 static void
@@ -419,7 +421,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return -1;
+    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return 1;
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -507,8 +509,6 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         last_cb = (uint32_t)virtbase + last_sample * sizeof(dma_cb_t) * 2;
     }
 
-    terminate(0);
-
     return 0;
 }
 
@@ -560,5 +560,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    
+    terminate(errcode);
 }

@@ -142,7 +142,7 @@ CPU usage increases dramatically when adding audio because the program has to up
 
 The RDS data generator lies in the `rds.c` file.
 
-The RDS data generator generates cyclically four 0A groups (for transmitting PS), and one 2A group (for transmitting RT). `get_rds_group` generates one group, and uses `crc` for computing the CRC.
+The RDS data generator generates cyclically four 0A groups (for transmitting PS), and one 2A group (for transmitting RT). In addition, every minute, it inserts a 4A group (for transmitting CT, clock time). `get_rds_group` generates one group, and uses `crc` for computing the CRC.
 
 To get samples of RDS data, call `get_rds_samples`. It calls `get_rds_group`, differentially encodes the signal and generates a shaped biphase symbol. Successive biphase symbols overlap: the samples are added so that the result is equivalent to applying the shaping filter (a [root-raised-cosine (RRC) filter ](http://en.wikipedia.org/wiki/Root-raised-cosine_filter) specified in the RDS standard) to a sequence of Manchester-encoded pulses.
 
@@ -164,6 +164,9 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
+* 2014-08-04: bugfix (ppm now uses floats)
+* 2014-06-22: generate CT (clock time) signals, bugfixes
 * 2014-05-04: possibility to change PS and RT at run-time
 * 2014-04-28: support piping audio file data to Pi-FM-RDS' standard input
 * 2014-04-14: new release that supports any sample rate for the audio input, and that can generate a proper FM-Stereo signal if a stereophonic input file is provided
