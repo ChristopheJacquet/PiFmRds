@@ -30,10 +30,15 @@
 #define GROUP_LENGTH 4
 
 struct {
+    uint16_t pi;
+    int ta;
     char ps[PS_LENGTH];
     char rt[RT_LENGTH];
-    uint16_t pi;
-} rds_params;
+} rds_params = { 0 };
+/* Here, the first member of the struct must be a scalar to avoid a
+   warning on -Wmissing-braces with GCC < 4.8.3 
+   (bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119)
+*/
 
 /* The RDS error-detection code generator polynomial is
    x^10 + x^8 + x^7 + x^5 + x^4 + x^3 + x^0
@@ -92,7 +97,7 @@ int get_rds_ct_group(uint16_t *blocks) {
                         (int)((utc->tm_year - l) * 365.25) +
                         (int)((utc->tm_mon + 2 + l*12) * 30.6001);
         
-        blocks[1] = 0x4000 | (mjd>>15);
+        blocks[1] = 0x4400 | (mjd>>15);
         blocks[2] = (mjd<<1) | (utc->tm_hour>>4);
         blocks[3] = (utc->tm_hour & 0xF)<<12 | utc->tm_min<<6;
         
@@ -107,9 +112,9 @@ int get_rds_ct_group(uint16_t *blocks) {
     } else return 0;
 }
 
-/* Creates an RDS group. This generates sequences of the form 0B, 0B, 0B, 0B, 2A, etc.
+/* Creates an RDS group. This generates sequences of the form 0A, 0A, 0A, 0A, 2A, etc.
    The pattern is of length 5, the variable 'state' keeps track of where we are in the
-   pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0B) sequence
+   pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
    or RT (2A) sequence, respectively.
 */
 void get_rds_group(int *buffer) {
@@ -121,13 +126,14 @@ void get_rds_group(int *buffer) {
     // Generate block content
     if(! get_rds_ct_group(blocks)) { // CT (clock time) has priority on other group types
         if(state < 4) {
-            blocks[1] = 0x0000 | ps_state;
+            blocks[1] = 0x0400 | ps_state;
+            if(rds_params.ta) blocks[1] |= 0x0010;
             blocks[2] = 0xCDCD;     // no AF
             blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
             ps_state++;
             if(ps_state >= 4) ps_state = 0;
         } else { // state == 5
-            blocks[1] = 0x2000 | rt_state;
+            blocks[1] = 0x2400 | rt_state;
             blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
             blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
             rt_state++;
@@ -228,7 +234,6 @@ void get_rds_samples(float *buffer, int count) {
 
 void set_rds_pi(uint16_t pi_code) {
     rds_params.pi = pi_code;
-
 }
 
 void set_rds_rt(char *rt) {
@@ -243,4 +248,8 @@ void set_rds_ps(char *ps) {
     for(int i=0; i<8; i++) {
         if(rds_params.ps[i] == 0) rds_params.ps[i] = 32;
     }
+}
+
+void set_rds_ta(int ta) {
+    rds_params.ta = ta;
 }

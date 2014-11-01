@@ -81,6 +81,13 @@ int poll_control_pipe() {
             printf("RT set to: \"%s\"\n", arg);
             return CONTROL_PIPE_RT_SET;
         }
+        if(res[0] == 'T' && res[1] == 'A') {
+            int ta = ( strcmp(arg, "ON") == 0 );
+            set_rds_ta(ta);
+            printf("Set TA to ");
+            if(ta) printf("ON\n"); else printf("OFF\n");
+            return CONTROL_PIPE_TA_SET;
+        }
     }
     
     return -1;

@@ -78,9 +78,9 @@ sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./p
 ```
 
 
-### Changing PS and RT at run-time
+### Changing PS, RT and TA at run-time
 
-You can control PS and RT at run-time using a named pipe (FIFO). For this run Pi-FM-RDS with the `-ctl` argument.
+You can control PS, RT and TA (Traffic Announcement flag) at run-time using a named pipe (FIFO). For this run Pi-FM-RDS with the `-ctl` argument.
 
 Example:
 
@@ -89,17 +89,19 @@ mkfifo rds_ctl
 sudo ./pi_fm_rds -ctl rds_ctl
 ```
 
-Then you can send “commands” to change PS and RT:
+Then you can send “commands” to change PS, RT and TA:
 
 ```
 cat >rds_ctl
 PS MyText
 RT A text to be sent as radiotext
+TA ON
 PS OtherTxt
+TA OFF
 ...
 ```
 
-Every line must start with either `PS` or `RT`, followed by one space character, and the desired value. Any other line format is silently ignored.
+Every line must start with either `PS`, `RT` or `TA`, followed by one space character, and the desired value. Any other line format is silently ignored. `TA ON` switches the Traffic Announcement flag to *on*, any other value switches it to *off*.
 
 
 ## Warning and Diclaimer
@@ -117,7 +119,7 @@ I could not be held liable for any misuse of your own Raspberry Pi. Any experime
 Pi-FM-RDS was successfully tested with all my RDS-able devices, namely:
 
 * a Sony ICF-C20RDS alarm clock from 1995,
-* a Sangean PR-D1 portable receiver from 1998,
+* a Sangean PR-D1 portable receiver from 1998, and an ATS-305 from 1999,
 * a Samsung Galaxy S2 mobile phone from 2011,
 * a Philips MBD7020 hifi system from 2012,
 * a Silicon Labs [USBFMRADIO-RD](http://www.silabs.com/products/mcu/Pages/USBFMRadioRD.aspx) USB stick, employing an Si4701 chip, and using my [RDS Surveyor](http://rds-surveyor.sourceforge.net/) program,
@@ -164,6 +166,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
 * 2014-08-04: bugfix (ppm now uses floats)
 * 2014-06-22: generate CT (clock time) signals, bugfixes
