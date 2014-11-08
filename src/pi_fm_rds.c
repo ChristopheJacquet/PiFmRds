@@ -156,7 +156,6 @@
 
 // The deviation specifies how wide the signal is. Use 25.0 for WBFM
 // (broadcast radio) and about 3.5 for NBFM (walkie-talkie style radio)
-#define DEVIATION        25.0
 
 
 typedef struct {
@@ -271,7 +270,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, float deviation) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -492,7 +491,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
                 data_index = 0;
             }
             
-            float dval = data[data_index] * (DEVIATION / 10.);
+            float dval = data[data_index] * (deviation / 10.);
             data_index++;
             data_len--;
 
@@ -521,6 +520,7 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+    float deviation = 25.0;
     
     
     // Parse command-line arguments
@@ -553,14 +553,17 @@ int main(int argc, char **argv) {
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
+        } else if(strcmp("-dev", arg)==0 && param != NULL) {
+            i++;
+            deviation = atof(param);
         } else {
             fatal("Unrecognised argument: %s\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
-            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
+            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe] [-dev deviation]\n", arg);
         }
     }
     
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, deviation);
     
     terminate(errcode);
 }
