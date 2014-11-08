@@ -216,11 +216,21 @@ static void
 fatal(char *fmt, ...)
 {
     va_list ap;
-
+    fprintf(stderr,"ERROR: ");
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     terminate(0);
+}
+
+static void
+warn(char *fmt, ...)
+{
+    va_list ap;
+    fprintf(stderr,"WARNING: ");
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
 }
 
 static uint32_t
@@ -537,7 +547,7 @@ int main(int argc, char **argv) {
             i++;
             carrier_freq = 1e6 * atof(param);
             if(carrier_freq < 87500000 || carrier_freq > 108000000)
-                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
+                warn("Frequency should be in megahertz between 87.5 and 108.0, but is %f MHz\n",atof(param));
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
             pi = (uint16_t) strtol(param, NULL, 16);
