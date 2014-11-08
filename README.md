@@ -167,6 +167,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-11-08: support for non-standard frequencies and frequency deviations
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
 * 2014-08-04: bugfix (ppm now uses floats)
