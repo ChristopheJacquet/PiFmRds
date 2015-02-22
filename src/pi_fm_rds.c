@@ -271,7 +271,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, int raw) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -421,7 +421,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return 1;
+    if(fm_mpx_open(audio_file, DATA_SIZE, raw) < 0) return 1;
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -486,7 +486,8 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
             // get more baseband samples if necessary
             if(data_len == 0) {
                 if( fm_mpx_get_samples(data) < 0 ) {
-                    terminate(0);
+                    //terminate(0);
+                    return 0;
                 }
                 data_len = DATA_SIZE;
                 data_index = 0;
@@ -579,6 +580,7 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+    int raw = 0;
     
     
     // Parse command-line arguments
@@ -598,7 +600,7 @@ int main(int argc, char **argv) {
         } else if(strcmp("-freq", arg)==0 && param != NULL) {
             i++;
             carrier_freq = 1e6 * atof(param);
-            if(carrier_freq < 87500000 || carrier_freq > 108000000)
+            if(carrier_freq < 76000000 || carrier_freq > 108000000)
                 fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
@@ -620,6 +622,8 @@ int main(int argc, char **argv) {
         } else if(strcmp("-kill", arg)==0) { //kill carrierwave now and exit
             kill_fm();
             terminate(0);
+        } else if(strcmp("-raw", arg)==0) { //expect raw input of 44.1khz, 2 channels, 16 bit pcm.
+            raw = 1;
         } else {
             printf("Unrecognised argument: %s\n", arg);
             print_info();
@@ -627,7 +631,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, raw);
     
     terminate(errcode);
 }
