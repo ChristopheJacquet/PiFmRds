@@ -621,6 +621,7 @@ int main(int argc, char **argv) {
             kill_fm();
             terminate(0);
         } else {
+            printf("Unrecognised argument: %s\n", arg);
             print_info();
             exit(0);
         }
