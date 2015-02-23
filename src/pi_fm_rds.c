@@ -569,7 +569,7 @@ void kill_fm(){
 void print_info(){
 	printf("Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe] [-autokill]\n"
-           "                  [-kill]\n");
+           "                  [-kill] [-raw]\n");
 }
 
 int main(int argc, char **argv) {
