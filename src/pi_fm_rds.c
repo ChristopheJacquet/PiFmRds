@@ -118,7 +118,7 @@
 #define DMA_CS            (0x00/4)
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
-
+//TODO use different DMA channel: DMA0 is used by PCM audio.
 #define DMA_BASE        0x20007000
 #define DMA_LEN            0x24
 #define PWM_BASE        0x2020C000
