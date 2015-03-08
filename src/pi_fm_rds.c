@@ -118,7 +118,7 @@
 #define DMA_CS            (0x00/4)
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
-
+//TODO use different DMA channel: DMA0 is used by PCM audio.
 #define DMA_BASE        0x20007000
 #define DMA_LEN            0x24
 #define PWM_BASE        0x2020C000
@@ -271,7 +271,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, int raw) {
     int i, fd, pid;
     char pagemap_fn[64];
 
@@ -421,7 +421,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return 1;
+    if(fm_mpx_open(audio_file, DATA_SIZE, raw) < 0) return 1;
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -486,7 +486,8 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
             // get more baseband samples if necessary
             if(data_len == 0) {
                 if( fm_mpx_get_samples(data) < 0 ) {
-                    terminate(0);
+                    //terminate(0);
+                    return 0;
                 }
                 data_len = DATA_SIZE;
                 data_index = 0;
@@ -512,6 +513,64 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     return 0;
 }
 
+#define BCM2708_PERI_BASE        0x20000000
+//#define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
+#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
+#define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
+#define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
+
+//#define PAGE_SIZE (4*1024)
+#define BLOCK_SIZE (4*1024)
+
+int  mem_fd;
+void *gpio_map;
+// I/O access
+volatile unsigned *gpio;
+
+void setup_io()
+{
+   /* open /dev/mem */
+   if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
+      printf("can't open /dev/mem \n");
+      exit(-1);
+   }
+
+   /* mmap GPIO */
+   gpio_map = mmap(
+      NULL,             //Any adddress in our space will do
+      BLOCK_SIZE,       //Map length
+      PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
+      MAP_SHARED,       //Shared with other processes
+      mem_fd,           //File to map
+      GPIO_BASE         //Offset to GPIO peripheral
+   );
+
+   close(mem_fd); //No need to keep mem_fd open after mmap
+
+   if (gpio_map == MAP_FAILED) {
+      printf("mmap error %d\n", (int)gpio_map);//errno also set!
+      exit(-1);
+   }
+
+   // Always use volatile pointer!
+   gpio = (volatile unsigned *)gpio_map;
+
+
+} // setup_io
+
+void kill_fm(){
+    setup_io();
+    INP_GPIO(4); // must use INP_GPIO before we can use OUT_GPIO
+    OUT_GPIO(4);
+    GPIO_SET = 1<<4;
+    printf("FM Transmission terminated.\n");
+}
+
+void print_info(){
+	printf("Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
+           "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe] [-autokill]\n"
+           "                  [-kill] [-raw]\n");
+}
 
 int main(int argc, char **argv) {
     char *audio_file = NULL;
@@ -521,9 +580,14 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+    int raw = 0;
     
     
     // Parse command-line arguments
+    if(argc <= 1){
+    	print_info();
+        exit(0);
+    }
     for(int i=1; i<argc; i++) {
         char *arg = argv[i];
         char *param = NULL;
@@ -536,7 +600,7 @@ int main(int argc, char **argv) {
         } else if(strcmp("-freq", arg)==0 && param != NULL) {
             i++;
             carrier_freq = 1e6 * atof(param);
-            if(carrier_freq < 87500000 || carrier_freq > 108000000)
+            if(carrier_freq < 76000000 || carrier_freq > 108000000)
                 fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
@@ -553,14 +617,21 @@ int main(int argc, char **argv) {
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
+        } else if(strcmp("-autokill", arg)==0) { //automatically kill carrierwave at exit
+            atexit(kill_fm);
+        } else if(strcmp("-kill", arg)==0) { //kill carrierwave now and exit
+            kill_fm();
+            terminate(0);
+        } else if(strcmp("-raw", arg)==0) { //expect raw input of 44.1khz, 2 channels, 16 bit pcm.
+            raw = 1;
         } else {
-            fatal("Unrecognised argument: %s\n"
-            "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
-            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
+            printf("Unrecognised argument: %s\n", arg);
+            print_info();
+            exit(0);
         }
     }
     
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, raw);
     
     terminate(errcode);
 }

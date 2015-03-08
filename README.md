@@ -56,6 +56,9 @@ All arguments are optional:
 * `-rt` specifies the radiotext (RT) to be transmitted. Limit: 64 characters. Example: `-rt 'Hello, world!'`.
 * `-ctl` specifies a named pipe (FIFO) to use as a control channel to change PS and RT at run-time (see below).
 * `-ppm` specifies your Raspberry Pi's oscillator error in parts per million (ppm), see below.
+* `-autokill` stop broadcasting the carrier wave at exit.
+* `-kill` stop any ongoing broadcast, reset the DMA controller and exit. Do not use while an instance is running!
+* `-raw` raw mode expects 44100HZ bitrate, 2 channels and PCM 16 bit.
 
 By default the PS changes back and forth between `Pi-FmRds` and a sequence number, starting at `00000000`. The PS changes around one time per second.
 

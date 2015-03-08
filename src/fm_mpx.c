@@ -80,13 +80,19 @@ float *alloc_empty_buffer(size_t length) {
 }
 
 
-int fm_mpx_open(char *filename, size_t len) {
+int fm_mpx_open(char *filename, size_t len, int raw) {
     length = len;
 
     if(filename != NULL) {
         // Open the input file
         SF_INFO sfinfo;
  
+		if(raw){
+			sfinfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+	    	sfinfo.samplerate = 44100;
+	    	sfinfo.channels = 2;
+		}
+		
         // stdin or file on the filesystem?
         if(filename[0] == '-') {
             if(! (inf = sf_open_fd(fileno(stdin), SFM_READ, &sfinfo, 0))) {
@@ -177,8 +183,9 @@ int fm_mpx_get_samples(float *mpx_buffer) {
                     }
                     if(audio_len == 0) {
                         if( sf_seek(inf, 0, SEEK_SET) < 0 ) {
-                            fprintf(stderr, "Could not rewind in audio file, terminating\n");
-                            return -1;
+                            //fprintf(stderr, "Could not rewind in audio file, terminating\n");
+                            //return -1;
+                            return 0;
                         }
                     } else {
                         break;
