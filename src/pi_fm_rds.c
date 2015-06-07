@@ -119,13 +119,13 @@
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
 
-#define DMA_BASE        0x20007000
+#define DMA_BASE        0x3F007000 // Pi 2 Ready
 #define DMA_LEN            0x24
-#define PWM_BASE        0x2020C000
+#define PWM_BASE        0x3F20C000 // Pi 2 Ready
 #define PWM_LEN            0x28
-#define CLK_BASE            0x20101000
+#define CLK_BASE            0x3F101000 // Pi 2 Ready
 #define CLK_LEN            0xA8
-#define GPIO_BASE        0x20200000
+#define GPIO_BASE        0x3F200000 // Pi 2 Ready
 #define GPIO_LEN        0xB4
 
 
@@ -245,7 +245,7 @@ mem_phys_to_virt(uint32_t phys)
         }
     }
     fatal("Failed to reverse map phys addr %08x\n", phys);
-
+    // FIXME!!! Failed with code 0x5a004a20 and 0x00000000 sometime
     return 0;
 }
 
@@ -257,7 +257,8 @@ map_peripheral(uint32_t base, uint32_t len)
 
     if (fd < 0)
         fatal("Failed to open /dev/mem: %m\n");
-    vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
+    //vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
+    vaddr = mmap(NULL, 0x002FFFFF, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
     if (vaddr == MAP_FAILED)
         fatal("Failed to map peripheral at 0x%08x: %m\n", base);
     close(fd);

@@ -4,8 +4,8 @@ STD_CFLAGS = -Wall -std=gnu99 -c -g -O3
 # Enable ARM-specific options only on ARM, and compilation of the app only on ARM
 UNAME := $(shell uname -m)
 
-ifeq ($(UNAME), armv6l)
-	CFLAGS = $(STD_CFLAGS) -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math
+ifeq ($(UNAME), armv7l)
+	CFLAGS = $(STD_CFLAGS) -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -ffast-math
 
 app: rds.o waveforms.o pi_fm_rds.o fm_mpx.o control_pipe.o
 	$(CC) -o pi_fm_rds rds.o waveforms.o pi_fm_rds.o fm_mpx.o control_pipe.o -lm -lsndfile
