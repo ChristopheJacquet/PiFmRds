@@ -19,7 +19,7 @@ Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-l
 Then clone the source repository and run `make` in the `src` directory:
 
 ```bash
-git clone https://github.com/ChristopheJacquet/PiFmRds.git
+git clone https://github.com/SandPox/PiFmRds.git
 cd PiFmRds/src
 make
 ```
