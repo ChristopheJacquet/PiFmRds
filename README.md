@@ -56,6 +56,7 @@ All arguments are optional:
 * `-rt` specifies the radiotext (RT) to be transmitted. Limit: 64 characters. Example: `-rt 'Hello, world!'`.
 * `-ctl` specifies a named pipe (FIFO) to use as a control channel to change PS and RT at run-time (see below).
 * `-ppm` specifies your Raspberry Pi's oscillator error in parts per million (ppm), see below.
+* `-dev` specifies the frequency deviation (in KHz). Example `-dev 25.0`.
 
 By default the PS changes back and forth between `Pi-FmRds` and a sequence number, starting at `00000000`. The PS changes around one time per second.
 
@@ -166,6 +167,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2014-11-08: support for non-standard frequencies and frequency deviations
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
 * 2014-08-04: bugfix (ppm now uses floats)
