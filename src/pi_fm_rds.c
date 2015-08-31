@@ -103,6 +103,13 @@
 #include "fm_mpx.h"
 #include "control_pipe.h"
 
+#if (RASPI)==1
+#define IO_BASE 0x20000000
+#elif (RASPI)==2
+#define IO_BASE 0x3F000000
+#else
+#error Unknown Raspberry Pi version (variable RASPI)
+#endif
 
 #define NUM_SAMPLES        50000
 #define NUM_CBS            (NUM_SAMPLES * 2)
@@ -119,13 +126,13 @@
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
 
-#define DMA_BASE        0x20007000
+#define DMA_BASE        (IO_BASE + 0x7000)
 #define DMA_LEN            0x24
-#define PWM_BASE        0x2020C000
+#define PWM_BASE        (IO_BASE + 0x20C000)
 #define PWM_LEN            0x28
-#define CLK_BASE            0x20101000
+#define CLK_BASE            (IO_BASE + 0x101000)
 #define CLK_LEN            0xA8
-#define GPIO_BASE        0x20200000
+#define GPIO_BASE        (IO_BASE + 0x200000)
 #define GPIO_LEN        0xB4
 
 
@@ -252,7 +259,7 @@ mem_phys_to_virt(uint32_t phys)
 static void *
 map_peripheral(uint32_t base, uint32_t len)
 {
-    int fd = open("/dev/mem", O_RDWR);
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
     void * vaddr;
 
     if (fd < 0)
@@ -308,7 +315,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         fatal("Failed to open %s: %m\n", pagemap_fn);
     if (lseek(fd, (unsigned long)virtbase >> 9, SEEK_SET) != (unsigned long)virtbase >> 9)
         fatal("Failed to seek on %s: %m\n", pagemap_fn);
-//    printf("Page map:\n");
+    printf("Page map:\n");
     for (i = 0; i < NUM_PAGES; i++) {
         uint64_t pfn;
         page_map[i].virtaddr = virtbase + i * PAGE_SIZE;
@@ -319,7 +326,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         if (((pfn >> 55)&0xfbf) != 0x10c)  // pagemap bits: https://www.kernel.org/doc/Documentation/vm/pagemap.txt
             fatal("Page %d not present (pfn 0x%016llx)\n", i, pfn);
         page_map[i].physaddr = (uint32_t)pfn << PAGE_SHIFT | 0x40000000;
-//        printf("  %2d: %8p ==> 0x%08x [0x%016llx]\n", i, page_map[i].virtaddr, page_map[i].physaddr, pfn);
+        printf("  %2d: %8p ==> 0x%08x [0x%016llx]\n", i, page_map[i].virtaddr, page_map[i].physaddr, pfn);
     }
 
     // GPIO4 needs to be ALT FUNC 0 to otuput the clock

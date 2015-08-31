@@ -5,13 +5,21 @@ STD_CFLAGS = -Wall -std=gnu99 -c -g -O3
 UNAME := $(shell uname -m)
 
 ifeq ($(UNAME), armv6l)
-	CFLAGS = $(STD_CFLAGS) -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math
+	CFLAGS = $(STD_CFLAGS) -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=1
+	TARGET = pi1
+else ifeq ($(UNAME), armv7l)
+	CFLAGS = $(STD_CFLAGS) -march=armv7-a -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=2
+	TARGET = pi2
+else
+	CFLAGS = $(STD_CFLAGS)
+	TARGET = other
+endif
+
+ifneq ($(TARGET), other)
 
 app: rds.o waveforms.o pi_fm_rds.o fm_mpx.o control_pipe.o
 	$(CC) -o pi_fm_rds rds.o waveforms.o pi_fm_rds.o fm_mpx.o control_pipe.o -lm -lsndfile
 
-else
-	CFLAGS = $(STD_CFLAGS)
 endif
 
 

@@ -10,7 +10,7 @@ It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](htt
 
 ![](doc/vfd_display.jpg)
 
-**NEW: now supports any sample rate for audio files, and generates FM-Stereo signals!**
+**Note: the program currently runs only on the Raspberry Pi 1. Although it will compile on the Raspberry Pi 2, it will not work. This seems to be due to the different memory architecture of the Raspberry Pi 2, which prevents the easy manipulation of DMA buffers from userspace because of caching. A clean solution would involve a kernel module to perform all the DMA work, but it requires time. Any help is appreciated :-)**
 
 ## How to use it?
 
