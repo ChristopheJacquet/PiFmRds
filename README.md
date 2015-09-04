@@ -115,7 +115,7 @@ In most countries, transmitting radio waves without a state-issued licence speci
 Therefore, always connect a shielded transmission line from the RaspberryPi directly
 to a radio receiver, so as **not** to emit radio waves. Never use an antenna.
 
-Even if you are a licensed amateur radio operator, using PiFmRds to transmit radio waves on ham frequencies without any filtering between the RaspberryPi and an antenna is most probably illegal because the square-wave carrier is very rich in harmonics, so the bandwidths requirement are likely not met.
+Even if you are a licensed amateur radio operator, using PiFmRds to transmit radio waves on ham frequencies without any filtering between the RaspberryPi and an antenna is most probably illegal because the square-wave carrier is very rich in harmonics, so the bandwidth requirements are likely not met.
 
 I could not be held liable for any misuse of your own Raspberry Pi. Any experiment is made under your own responsibility.
 
