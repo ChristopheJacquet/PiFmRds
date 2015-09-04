@@ -10,6 +10,8 @@ It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](htt
 
 ![](doc/vfd_display.jpg)
 
+PiFmRds has been developed for experimentation only. It is not a media center, it is not intended to broadcast music to your stereo system. See the [legal warning](#warning-and-disclaimer).
+
 **Note: the program currently runs only on the Raspberry Pi 1. Although it will compile on the Raspberry Pi 2, it will not work. This seems to be due to the different memory architecture of the Raspberry Pi 2, which prevents the easy manipulation of DMA buffers from userspace because of caching. A clean solution would involve a kernel module to perform all the DMA work, but it requires time. Any help is appreciated :-)**
 
 ## How to use it?
@@ -106,10 +108,14 @@ Every line must start with either `PS`, `RT` or `TA`, followed by one space char
 
 ## Warning and Diclaimer
 
-Never use this program to transmit VHF-FM data through an antenna, as it is
-illegal in most countries. This code is for experimental purposes only.
-Always connect a shielded transmission line from the RaspberryPi directly
-to a radio receiver, so as **not** to emit radio waves.
+PiFmRds is an **experimental** program, designed **only for experimentation**. It is in no way intended to become a personal *media center* or a tool to operate a *radio station*.
+
+In most countries, transmitting radio waves without a state-issued licence specific to the transmission modalities (frequency, power, bandwidth, etc.) is **illegal**.
+
+Therefore, always connect a shielded transmission line from the RaspberryPi directly
+to a radio receiver, so as **not** to emit radio waves. Never use an antenna.
+
+Even if you are a licensed amateur radio operator, using PiFmRds to transmit radio waves on ham frequencies without any filtering between the RaspberryPi and an antenna is most probably illegal because the square-wave carrier is very rich in harmonics, so the bandwidths requirement are likely not met.
 
 I could not be held liable for any misuse of your own Raspberry Pi. Any experiment is made under your own responsibility.
 
