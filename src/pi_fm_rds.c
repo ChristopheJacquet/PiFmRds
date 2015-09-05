@@ -236,6 +236,15 @@ udelay(int us)
 static void
 terminate(int num)
 {
+    // Stop outputting and generating the clock.
+    if (clk_reg && gpio_reg && mbox.virt_addr) {
+        // Set GPIO4 to be an output (instead of ALT FUNC 0, which is the clock).
+        gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (1 << 12);
+
+        // Disable the clock generator.
+        clk_reg[GPCLK_CNTL] = 0x5A;
+    }
+
     if (dma_reg && mbox.virt_addr) {
         dma_reg[DMA_CS] = BCM2708_DMA_RESET;
         udelay(10);
@@ -244,13 +253,13 @@ terminate(int num)
     fm_mpx_close();
     close_control_pipe();
 
-	if (mbox.virt_addr != NULL) {
-		unmapmem(mbox.virt_addr, NUM_PAGES * 4096);
-		mem_unlock(mbox.handle, mbox.mem_ref);
-		mem_free(mbox.handle, mbox.mem_ref);
-	}
+    if (mbox.virt_addr != NULL) {
+        unmapmem(mbox.virt_addr, NUM_PAGES * 4096);
+        mem_unlock(mbox.handle, mbox.mem_ref);
+        mem_free(mbox.handle, mbox.mem_ref);
+    }
 
-    printf("Terminating: cleanly deactivated the DMA engine.\n");
+    printf("Terminating: cleanly deactivated the DMA engine and killed the carrier.\n");
     
     exit(num);
 }
@@ -335,7 +344,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 	printf("virt_addr = %p\n", mbox.virt_addr);
 	
 
-    // GPIO4 needs to be ALT FUNC 0 to otuput the clock
+    // GPIO4 needs to be ALT FUNC 0 to output the clock
     gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (4 << 12);
 
     // Program GPCLK to use MASH setting 1, so fractional dividers work
