@@ -558,8 +558,8 @@ int main(int argc, char **argv) {
         } else if(strcmp("-freq", arg)==0 && param != NULL) {
             i++;
             carrier_freq = 1e6 * atof(param);
-            if(carrier_freq < 87500000 || carrier_freq > 108000000)
-                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9.\n");
+            if(carrier_freq < 76e6 || carrier_freq > 108e6)
+                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9, between 76 and 108.\n");
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
             pi = (uint16_t) strtol(param, NULL, 16);
