@@ -8,21 +8,26 @@ This program generates an FM modulation, with RDS (Radio Data System) data gener
 
 It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
 
+It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2.
+
 ![](doc/vfd_display.jpg)
 
 PiFmRds has been developed for experimentation only. It is not a media center, it is not intended to broadcast music to your stereo system. See the [legal warning](#warning-and-disclaimer).
-
-**Note: the program currently runs only on the Raspberry Pi 1. Although it will compile on the Raspberry Pi 2, it will not work. This seems to be due to the different memory architecture of the Raspberry Pi 2, which prevents the easy manipulation of DMA buffers from userspace because of caching. A clean solution would involve a kernel module to perform all the DMA work, but it requires time. Any help is appreciated :-)**
 
 ## How to use it?
 
 Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-like distributions, for instance Raspbian, run `sudo apt-get install libsndfile1-dev`.
 
-Then clone the source repository and run `make` in the `src` directory:
+Pi-FM-RDS also depends on the Linux `rpi-mailbox` driver, so you need a recent Linux kernel. The Raspbian releases from August 2015 have this.
+
+**Important.** The binaries compiled for the Raspberry Pi 1 are not compatible with the Raspberry Pi 2, and conversely. Always re-compile when switching models, so do not skip the `make clean` step in the instructions below!
+
+Clone the source repository and run `make` in the `src` directory:
 
 ```bash
 git clone https://github.com/ChristopheJacquet/PiFmRds.git
 cd PiFmRds/src
+make clean
 make
 ```
 
@@ -172,6 +177,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2015-09-05: support for the Raspberry Pi 2
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
 * 2014-08-04: bugfix (ppm now uses floats)
@@ -183,4 +189,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014. Released under the GNU GPL v3.
+© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014-2015. Released under the GNU GPL v3.

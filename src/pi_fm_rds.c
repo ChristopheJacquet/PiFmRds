@@ -1,7 +1,7 @@
 /*
  * PiFmRds - FM/RDS transmitter for the Raspberry Pi
- * Copyright (C) 2014 Christophe Jacquet, F8FTK
- * Copyright (C) 2012 Richard Hirst
+ * Copyright (C) 2014, 2015 Christophe Jacquet, F8FTK
+ * Copyright (C) 2012, 2015 Richard Hirst
  * Copyright (C) 2012 Oliver Mattos and Oskar Weigl
  *
  * See https://github.com/ChristopheJacquet/PiFmRds
@@ -15,6 +15,11 @@
  *
  * I (Christophe Jacquet) have adapted their idea to transmitting samples
  * at 228 kHz, allowing to build the 57 kHz subcarrier for RDS BPSK data.
+ *
+ * To make it work on the Raspberry Pi 2, I used a fix by Richard Hirst
+ * (again) to request memory using Broadcom's mailbox interface. This fix
+ * was published for ServoBlaster here:
+ * https://www.raspberrypi.org/forums/viewtopic.php?p=699651#p699651
  *
  * Never use this to transmit VHF-FM data through an antenna, as it is
  * illegal in most countries. This code is for testing purposes only.
@@ -103,10 +108,19 @@
 #include "fm_mpx.h"
 #include "control_pipe.h"
 
+#include "mailbox.h"
+#define MBFILE			DEVICE_FILE_NAME	/* From mailbox.h */
+
 #if (RASPI)==1
-#define IO_BASE 0x20000000
+#define PERIPH_VIRT_BASE 0x20000000
+#define PERIPH_PHYS_BASE 0x7e000000
+#define DRAM_PHYS_BASE 0x40000000
+#define MEM_FLAG 0x0c
 #elif (RASPI)==2
-#define IO_BASE 0x3F000000
+#define PERIPH_VIRT_BASE 0x3f000000
+#define PERIPH_PHYS_BASE 0x7e000000
+#define DRAM_PHYS_BASE 0xc0000000
+#define MEM_FLAG 0x04
 #else
 #error Unknown Raspberry Pi version (variable RASPI)
 #endif
@@ -126,14 +140,24 @@
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
 
-#define DMA_BASE        (IO_BASE + 0x7000)
+#define DMA_BASE_OFFSET		0x00007000
 #define DMA_LEN            0x24
-#define PWM_BASE        (IO_BASE + 0x20C000)
-#define PWM_LEN            0x28
-#define CLK_BASE            (IO_BASE + 0x101000)
-#define CLK_LEN            0xA8
-#define GPIO_BASE        (IO_BASE + 0x200000)
-#define GPIO_LEN        0xB4
+#define PWM_BASE_OFFSET		0x0020C000
+#define PWM_LEN			0x28
+#define CLK_BASE_OFFSET	        0x00101000
+#define CLK_LEN			0xA8
+#define GPIO_BASE_OFFSET	0x00200000
+#define GPIO_LEN		0x100
+
+#define DMA_VIRT_BASE		(PERIPH_VIRT_BASE + DMA_BASE_OFFSET)
+#define PWM_VIRT_BASE		(PERIPH_VIRT_BASE + PWM_BASE_OFFSET)
+#define CLK_VIRT_BASE		(PERIPH_VIRT_BASE + CLK_BASE_OFFSET)
+#define GPIO_VIRT_BASE		(PERIPH_VIRT_BASE + GPIO_BASE_OFFSET)
+#define PCM_VIRT_BASE		(PERIPH_VIRT_BASE + PCM_BASE_OFFSET)
+
+#define PWM_PHYS_BASE		(PERIPH_PHYS_BASE + PWM_BASE_OFFSET)
+#define PCM_PHYS_BASE		(PERIPH_PHYS_BASE + PCM_BASE_OFFSET)
+#define GPIO_PHYS_BASE		(PERIPH_PHYS_BASE + GPIO_BASE_OFFSET)
 
 
 #define PWM_CTL            (0x00/4)
@@ -143,6 +167,8 @@
 
 #define PWMCLK_CNTL        40
 #define PWMCLK_DIV        41
+
+#define CM_GP0DIV (0x7e101074)
 
 #define GPCLK_CNTL        (0x70/4)
 #define GPCLK_DIV        (0x74/4)
@@ -154,12 +180,12 @@
 
 #define PWMDMAC_ENAB        (1<<31)
 // I think this means it requests as soon as there is one free slot in the FIFO
-// which is what we want as burst DMA would mess up our timing..
+// which is what we want as burst DMA would mess up our timing.
 #define PWMDMAC_THRSHLD        ((15<<8)|(15<<0))
 
 #define GPFSEL0            (0x00/4)
 
-#define PLLFREQ            500000000.    // PLLD is running at 500MHz        ////
+#define PLLFREQ            500000000.    // PLLD is running at 500MHz
 
 // The deviation specifies how wide the signal is. Use 25.0 for WBFM
 // (broadcast radio) and about 3.5 for NBFM (walkie-talkie style radio)
@@ -171,14 +197,17 @@ typedef struct {
          stride, next, pad[2];
 } dma_cb_t;
 
-typedef struct {
-    uint8_t *virtaddr;
-    uint32_t physaddr;
-} page_map_t;
+#define BUS_TO_PHYS(x) ((x)&~0xC0000000)
 
-page_map_t *page_map;
 
-static uint8_t *virtbase;
+static struct {
+	int handle;		    /* From mbox_open() */
+	unsigned mem_ref;	/* From mem_alloc() */
+	unsigned bus_addr;	/* From mem_lock() */
+	uint8_t *virt_addr;	/* From mapmem() */
+} mbox;
+	
+
 
 static volatile uint32_t *pwm_reg;
 static volatile uint32_t *clk_reg;
@@ -207,14 +236,20 @@ udelay(int us)
 static void
 terminate(int num)
 {
-    if (dma_reg) {
+    if (dma_reg && mbox.virt_addr) {
         dma_reg[DMA_CS] = BCM2708_DMA_RESET;
         udelay(10);
     }
     
     fm_mpx_close();
     close_control_pipe();
-    
+
+	if (mbox.virt_addr != NULL) {
+		unmapmem(mbox.virt_addr, NUM_PAGES * 4096);
+		mem_unlock(mbox.handle, mbox.mem_ref);
+		mem_free(mbox.handle, mbox.mem_ref);
+	}
+
     printf("Terminating: cleanly deactivated the DMA engine.\n");
     
     exit(num);
@@ -234,26 +269,15 @@ fatal(char *fmt, ...)
 static uint32_t
 mem_virt_to_phys(void *virt)
 {
-    uint32_t offset = (uint8_t *)virt - virtbase;
+	uint32_t offset = (uint8_t *)virt - mbox.virt_addr;
 
-    return page_map[offset >> PAGE_SHIFT].physaddr + (offset % PAGE_SIZE);
+	return mbox.bus_addr + offset;
 }
 
 static uint32_t
 mem_phys_to_virt(uint32_t phys)
 {
-    uint32_t pg_offset = phys & (PAGE_SIZE - 1);
-    uint32_t pg_addr = phys - pg_offset;
-    int i;
-
-    for (i = 0; i < NUM_PAGES; i++) {
-        if (page_map[i].physaddr == pg_addr) {
-            return (uint32_t)virtbase + i * PAGE_SIZE + pg_offset;
-        }
-    }
-    fatal("Failed to reverse map phys addr %08x\n", phys);
-
-    return 0;
+    return phys - (uint32_t)mbox.bus_addr + (uint32_t)mbox.virt_addr;
 }
 
 static void *
@@ -263,10 +287,10 @@ map_peripheral(uint32_t base, uint32_t len)
     void * vaddr;
 
     if (fd < 0)
-        fatal("Failed to open /dev/mem: %m\n");
+        fatal("Failed to open /dev/mem: %m.\n");
     vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
     if (vaddr == MAP_FAILED)
-        fatal("Failed to map peripheral at 0x%08x: %m\n", base);
+        fatal("Failed to map peripheral at 0x%08x: %m.\n", base);
     close(fd);
 
     return vaddr;
@@ -279,12 +303,9 @@ map_peripheral(uint32_t base, uint32_t len)
 
 
 int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
-    int i, fd, pid;
-    char pagemap_fn[64];
-
     // Catch all signals possible - it is vital we kill the DMA engine
     // on process exit!
-    for (i = 0; i < 64; i++) {
+    for (int i = 0; i < 64; i++) {
         struct sigaction sa;
 
         memset(&sa, 0, sizeof(sa));
@@ -292,42 +313,27 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         sigaction(i, &sa, NULL);
     }
         
-    dma_reg = map_peripheral(DMA_BASE, DMA_LEN);
-    pwm_reg = map_peripheral(PWM_BASE, PWM_LEN);
-    clk_reg = map_peripheral(CLK_BASE, CLK_LEN);
-    gpio_reg = map_peripheral(GPIO_BASE, GPIO_LEN);
+    dma_reg = map_peripheral(DMA_VIRT_BASE, DMA_LEN);
+    pwm_reg = map_peripheral(PWM_VIRT_BASE, PWM_LEN);
+    clk_reg = map_peripheral(CLK_VIRT_BASE, CLK_LEN);
+    gpio_reg = map_peripheral(GPIO_VIRT_BASE, GPIO_LEN);
 
-    virtbase = mmap(NULL, NUM_PAGES * PAGE_SIZE, PROT_READ|PROT_WRITE,
-            MAP_SHARED|MAP_ANONYMOUS|MAP_NORESERVE|MAP_LOCKED,
-            -1, 0);
-    if (virtbase == MAP_FAILED)
-        fatal("Failed to mmap physical pages: %m\n");
-    if ((unsigned long)virtbase & (PAGE_SIZE-1))
-        fatal("Virtual address is not page aligned\n");
-    printf("Virtual memory mapped at %p\n", virtbase);
-    page_map = malloc(NUM_PAGES * sizeof(*page_map));
-    if (page_map == 0)
-        fatal("Failed to malloc page_map: %m\n");
-    pid = getpid();
-    sprintf(pagemap_fn, "/proc/%d/pagemap", pid);
-    fd = open(pagemap_fn, O_RDONLY);
-    if (fd < 0)
-        fatal("Failed to open %s: %m\n", pagemap_fn);
-    if (lseek(fd, (unsigned long)virtbase >> 9, SEEK_SET) != (unsigned long)virtbase >> 9)
-        fatal("Failed to seek on %s: %m\n", pagemap_fn);
-    printf("Page map:\n");
-    for (i = 0; i < NUM_PAGES; i++) {
-        uint64_t pfn;
-        page_map[i].virtaddr = virtbase + i * PAGE_SIZE;
-        // Following line forces page to be allocated
-        page_map[i].virtaddr[0] = 0;
-        if (read(fd, &pfn, sizeof(pfn)) != sizeof(pfn))
-            fatal("Failed to read %s: %m\n", pagemap_fn);
-        if (((pfn >> 55)&0xfbf) != 0x10c)  // pagemap bits: https://www.kernel.org/doc/Documentation/vm/pagemap.txt
-            fatal("Page %d not present (pfn 0x%016llx)\n", i, pfn);
-        page_map[i].physaddr = (uint32_t)pfn << PAGE_SHIFT | 0x40000000;
-        printf("  %2d: %8p ==> 0x%08x [0x%016llx]\n", i, page_map[i].virtaddr, page_map[i].physaddr, pfn);
-    }
+    /* Use the mailbox interface to the VC to ask for physical memory */
+	unlink(MBFILE);
+	if (mknod(MBFILE, S_IFCHR|0600, makedev(100, 0)) < 0)
+		fatal("Failed to create mailbox device.\n");
+	mbox.handle = mbox_open();
+	if (mbox.handle < 0)
+		fatal("Failed to open mailbox.\n");
+	printf("Allocating physical memory: size = %d     ", NUM_PAGES * 4096);
+	mbox.mem_ref = mem_alloc(mbox.handle, NUM_PAGES * 4096, 4096, MEM_FLAG);
+	/* TODO: How do we know that succeeded? */
+	printf("mem_ref = %u     ", mbox.mem_ref);
+	mbox.bus_addr = mem_lock(mbox.handle, mbox.mem_ref);
+	printf("bus_addr = %x     ", mbox.bus_addr);
+	mbox.virt_addr = mapmem(BUS_TO_PHYS(mbox.bus_addr), NUM_PAGES * 4096);
+	printf("virt_addr = %p\n", mbox.virt_addr);
+	
 
     // GPIO4 needs to be ALT FUNC 0 to otuput the clock
     gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (4 << 12);
@@ -337,10 +343,10 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     udelay(100);
     clk_reg[GPCLK_CNTL] = 0x5A << 24 | 1 << 9 | 1 << 4 | 6;
 
-    ctl = (struct control_data_s *)virtbase;
+    ctl = (struct control_data_s *) mbox.virt_addr;
     dma_cb_t *cbp = ctl->cb;
-    uint32_t phys_sample_dst = 0x7e101074;
-    uint32_t phys_pwm_fifo_addr = 0x7e20c000 + 0x18;
+    uint32_t phys_sample_dst = CM_GP0DIV;
+    uint32_t phys_pwm_fifo_addr = PWM_PHYS_BASE + 0x18;
 
 
     // Calculate the frequency control word
@@ -348,7 +354,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     uint32_t freq_ctl = ((float)(PLLFREQ / carrier_freq)) * ( 1 << 12 );
 
 
-    for (i = 0; i < NUM_SAMPLES; i++) {
+    for (int i = 0; i < NUM_SAMPLES; i++) {
         ctl->sample[i] = 0x5a << 24 | freq_ctl;    // Silence
         // Write a frequency sample
         cbp->info = BCM2708_DMA_NO_WIDE_BURSTS | BCM2708_DMA_WAIT_RESP;
@@ -360,7 +366,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         cbp++;
         // Delay
         cbp->info = BCM2708_DMA_NO_WIDE_BURSTS | BCM2708_DMA_WAIT_RESP | BCM2708_DMA_D_DREQ | BCM2708_DMA_PER_MAP(5);
-        cbp->src = mem_virt_to_phys(virtbase);
+        cbp->src = mem_virt_to_phys(mbox.virt_addr);
         cbp->dst = phys_pwm_fifo_addr;
         cbp->length = 4;
         cbp->stride = 0;
@@ -368,7 +374,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         cbp++;
     }
     cbp--;
-    cbp->next = mem_virt_to_phys(virtbase);
+    cbp->next = mem_virt_to_phys(mbox.virt_addr);
 
     // Here we define the rate at which we want to update the GPCLK control 
     // register.
@@ -389,7 +395,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     uint32_t idivider = (uint32_t) divider;
     uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
     
-    printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912]\n", 
+    printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912].\n", 
                 ppm, divider, idivider, fdivider);
 
     pwm_reg[PWM_CTL] = 0;
@@ -440,9 +446,9 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     
     if(ps) {
         set_rds_ps(ps);
-        printf("PI: %04X, PS: \"%s\"\n", pi, ps);
+        printf("PI: %04X, PS: \"%s\".\n", pi, ps);
     } else {
-        printf("PI: %04X, PS: <Varying>\n", pi);
+        printf("PI: %04X, PS: <Varying>.\n", pi);
         varying_ps = 1;
     }
     printf("RT: \"%s\"\n", rt);
@@ -482,8 +488,8 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         usleep(5000);
 
         uint32_t cur_cb = mem_phys_to_virt(dma_reg[DMA_CONBLK_AD]);
-        int last_sample = (last_cb - (uint32_t)virtbase) / (sizeof(dma_cb_t) * 2);
-        int this_sample = (cur_cb - (uint32_t)virtbase) / (sizeof(dma_cb_t) * 2);
+        int last_sample = (last_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
+        int this_sample = (cur_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
         int free_slots = this_sample - last_sample;
 
         if (free_slots < 0)
@@ -513,7 +519,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 
             free_slots -= SUBSIZE;
         }
-        last_cb = (uint32_t)virtbase + last_sample * sizeof(dma_cb_t) * 2;
+        last_cb = (uint32_t)mbox.virt_addr + last_sample * sizeof(dma_cb_t) * 2;
     }
 
     return 0;
@@ -544,7 +550,7 @@ int main(int argc, char **argv) {
             i++;
             carrier_freq = 1e6 * atof(param);
             if(carrier_freq < 87500000 || carrier_freq > 108000000)
-                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9\n");
+                fatal("Incorrect frequency specification. Must be in megahertz, of the form 107.9.\n");
         } else if(strcmp("-pi", arg)==0 && param != NULL) {
             i++;
             pi = (uint16_t) strtol(param, NULL, 16);
@@ -561,7 +567,7 @@ int main(int argc, char **argv) {
             i++;
             control_pipe = param;
         } else {
-            fatal("Unrecognised argument: %s\n"
+            fatal("Unrecognised argument: %s.\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
             "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
         }
