@@ -109,7 +109,7 @@
 #include "control_pipe.h"
 
 #include "mailbox.h"
-#define MBFILE			DEVICE_FILE_NAME	/* From mailbox.h */
+#define MBFILE            DEVICE_FILE_NAME    /* From mailbox.h */
 
 #if (RASPI)==1
 #define PERIPH_VIRT_BASE 0x20000000
@@ -140,24 +140,24 @@
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
 
-#define DMA_BASE_OFFSET		0x00007000
+#define DMA_BASE_OFFSET        0x00007000
 #define DMA_LEN            0x24
-#define PWM_BASE_OFFSET		0x0020C000
-#define PWM_LEN			0x28
-#define CLK_BASE_OFFSET	        0x00101000
-#define CLK_LEN			0xA8
-#define GPIO_BASE_OFFSET	0x00200000
-#define GPIO_LEN		0x100
+#define PWM_BASE_OFFSET        0x0020C000
+#define PWM_LEN            0x28
+#define CLK_BASE_OFFSET            0x00101000
+#define CLK_LEN            0xA8
+#define GPIO_BASE_OFFSET    0x00200000
+#define GPIO_LEN        0x100
 
-#define DMA_VIRT_BASE		(PERIPH_VIRT_BASE + DMA_BASE_OFFSET)
-#define PWM_VIRT_BASE		(PERIPH_VIRT_BASE + PWM_BASE_OFFSET)
-#define CLK_VIRT_BASE		(PERIPH_VIRT_BASE + CLK_BASE_OFFSET)
-#define GPIO_VIRT_BASE		(PERIPH_VIRT_BASE + GPIO_BASE_OFFSET)
-#define PCM_VIRT_BASE		(PERIPH_VIRT_BASE + PCM_BASE_OFFSET)
+#define DMA_VIRT_BASE        (PERIPH_VIRT_BASE + DMA_BASE_OFFSET)
+#define PWM_VIRT_BASE        (PERIPH_VIRT_BASE + PWM_BASE_OFFSET)
+#define CLK_VIRT_BASE        (PERIPH_VIRT_BASE + CLK_BASE_OFFSET)
+#define GPIO_VIRT_BASE        (PERIPH_VIRT_BASE + GPIO_BASE_OFFSET)
+#define PCM_VIRT_BASE        (PERIPH_VIRT_BASE + PCM_BASE_OFFSET)
 
-#define PWM_PHYS_BASE		(PERIPH_PHYS_BASE + PWM_BASE_OFFSET)
-#define PCM_PHYS_BASE		(PERIPH_PHYS_BASE + PCM_BASE_OFFSET)
-#define GPIO_PHYS_BASE		(PERIPH_PHYS_BASE + GPIO_BASE_OFFSET)
+#define PWM_PHYS_BASE        (PERIPH_PHYS_BASE + PWM_BASE_OFFSET)
+#define PCM_PHYS_BASE        (PERIPH_PHYS_BASE + PCM_BASE_OFFSET)
+#define GPIO_PHYS_BASE        (PERIPH_PHYS_BASE + GPIO_BASE_OFFSET)
 
 
 #define PWM_CTL            (0x00/4)
@@ -201,12 +201,12 @@ typedef struct {
 
 
 static struct {
-	int handle;		    /* From mbox_open() */
-	unsigned mem_ref;	/* From mem_alloc() */
-	unsigned bus_addr;	/* From mem_lock() */
-	uint8_t *virt_addr;	/* From mapmem() */
+    int handle;            /* From mbox_open() */
+    unsigned mem_ref;    /* From mem_alloc() */
+    unsigned bus_addr;    /* From mem_lock() */
+    uint8_t *virt_addr;    /* From mapmem() */
 } mbox;
-	
+    
 
 
 static volatile uint32_t *pwm_reg;
@@ -278,9 +278,9 @@ fatal(char *fmt, ...)
 static uint32_t
 mem_virt_to_phys(void *virt)
 {
-	uint32_t offset = (uint8_t *)virt - mbox.virt_addr;
+    uint32_t offset = (uint8_t *)virt - mbox.virt_addr;
 
-	return mbox.bus_addr + offset;
+    return mbox.bus_addr + offset;
 }
 
 static uint32_t
@@ -327,22 +327,25 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     clk_reg = map_peripheral(CLK_VIRT_BASE, CLK_LEN);
     gpio_reg = map_peripheral(GPIO_VIRT_BASE, GPIO_LEN);
 
-    /* Use the mailbox interface to the VC to ask for physical memory */
-	unlink(MBFILE);
-	if (mknod(MBFILE, S_IFCHR|0600, makedev(100, 0)) < 0)
-		fatal("Failed to create mailbox device.\n");
-	mbox.handle = mbox_open();
-	if (mbox.handle < 0)
-		fatal("Failed to open mailbox.\n");
-	printf("Allocating physical memory: size = %d     ", NUM_PAGES * 4096);
-	mbox.mem_ref = mem_alloc(mbox.handle, NUM_PAGES * 4096, 4096, MEM_FLAG);
-	/* TODO: How do we know that succeeded? */
-	printf("mem_ref = %u     ", mbox.mem_ref);
-	mbox.bus_addr = mem_lock(mbox.handle, mbox.mem_ref);
-	printf("bus_addr = %x     ", mbox.bus_addr);
-	mbox.virt_addr = mapmem(BUS_TO_PHYS(mbox.bus_addr), NUM_PAGES * 4096);
-	printf("virt_addr = %p\n", mbox.virt_addr);
-	
+    // Use the mailbox interface to the VC to ask for physical memory.
+    mbox.handle = mbox_open();
+    if (mbox.handle < 0)
+        fatal("Failed to open mailbox. Check kernel support for vcio / BCM2708 mailbox.\n");
+    printf("Allocating physical memory: size = %d     ", NUM_PAGES * 4096);
+    if(! (mbox.mem_ref = mem_alloc(mbox.handle, NUM_PAGES * 4096, 4096, MEM_FLAG))) {
+        fatal("Could not allocate memory.\n");
+    }
+    // TODO: How do we know that succeeded?
+    printf("mem_ref = %u     ", mbox.mem_ref);
+    if(! (mbox.bus_addr = mem_lock(mbox.handle, mbox.mem_ref))) {
+        fatal("Could not lock memory.\n");
+    }
+    printf("bus_addr = %x     ", mbox.bus_addr);
+    if(! (mbox.virt_addr = mapmem(BUS_TO_PHYS(mbox.bus_addr), NUM_PAGES * 4096))) {
+        fatal("Could not map memory.\n");
+    }
+    printf("virt_addr = %p\n", mbox.virt_addr);
+    
 
     // GPIO4 needs to be ALT FUNC 0 to output the clock
     gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (4 << 12);
