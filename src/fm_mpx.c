@@ -66,11 +66,7 @@ float fir_buffer_stereo[FIR_SIZE] = {0};
 int fir_index = 0;
 int channels;
 
-//3.185kHz for Europe, 2.120kHz for US
-const float PREEMPHASIS_US = 2120;
-const float PREEMPHASIS_EU = 3185;
 float *last_buffer_val;
-float preemphasis_corner_freq;
 float preemphasis_prewarp;
 float preemphasis_coefficient;
 
@@ -88,7 +84,7 @@ float *alloc_empty_buffer(size_t length) {
 }
 
 
-int fm_mpx_open(char *filename, size_t len) {
+int fm_mpx_open(char *filename, size_t len, float preemphasis_corner_freq) {
     length = len;
 
     if(filename != NULL) {
@@ -128,10 +124,9 @@ int fm_mpx_open(char *filename, size_t len) {
         last_buffer_val = (float*) malloc(sizeof(float)*channels);
         for(int i=0;i<channels;i++) last_buffer_val[i] = 0;
         
-        preemphasis_corner_freq = PREEMPHASIS_EU;
         preemphasis_prewarp = tan(PI*preemphasis_corner_freq/in_samplerate);
         preemphasis_coefficient = (1.0 + (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp))/2.0;
-        printf("Created preemphasis with with cutoff at %.1f Hz\n", preemphasis_corner_freq);
+        printf("Created preemphasis with cutoff at %.1f Hz\n", preemphasis_corner_freq);
         
     
         // Create the low-pass FIR filter
