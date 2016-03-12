@@ -134,8 +134,8 @@ int fm_mpx_open(char *filename, size_t len) {
         
     
         // Create the low-pass FIR filter
-        float cutoff_freq = 15000 * .8;
-        if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2 * .8;
+        float cutoff_freq = 22050;
+        if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2;
     
     
     
