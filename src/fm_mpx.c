@@ -121,17 +121,17 @@ int fm_mpx_open(char *filename, size_t len) {
         } else {
             printf("1 channel, monophonic operation.\n");
         } 
-		
-		// Create the preemphasis
-		last_buffer_val = (float*) malloc(sizeof(float)*channels);
-		for(int i=0;i<channels;i++) last_buffer_val[i] = 0;
-		
-		preemphasis_corner_freq = 2120; //3.185kHz for Europe, 2,120kHz for US
-		preemphasis_prewarp = tan(PI*preemphasis_corner_freq/in_samplerate);
-		preemphasis_coefficient_a = (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp);
-		preemphasis_coefficient_b = (1.0 + preemphasis_coefficient_a)/2.0;
-		printf("Created preemphasis with \n%lf \n%lf \n%lf \n%lf", preemphasis_corner_freq, preemphasis_prewarp, preemphasis_coefficient_a, preemphasis_coefficient_b);
-		
+        
+        // Create the preemphasis
+        last_buffer_val = (float*) malloc(sizeof(float)*channels);
+        for(int i=0;i<channels;i++) last_buffer_val[i] = 0;
+        
+        preemphasis_corner_freq = 2120; //3.185kHz for Europe, 2,120kHz for US
+        preemphasis_prewarp = tan(PI*preemphasis_corner_freq/in_samplerate);
+        preemphasis_coefficient_a = (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp);
+        preemphasis_coefficient_b = (1.0 + preemphasis_coefficient_a)/2.0;
+        printf("Created preemphasis with \n%lf \n%lf \n%lf \n%lf", preemphasis_corner_freq, preemphasis_prewarp, preemphasis_coefficient_a, preemphasis_coefficient_b);
+        
     
         // Create the low-pass FIR filter
         float cutoff_freq = 15000 * .8;
@@ -197,21 +197,21 @@ int fm_mpx_get_samples(float *mpx_buffer) {
                             return -1;
                         }
                     } else {
-						//apply preemphasis
-						int k;
-						int l;
-						float tmp;
-						for(k=0;k<audio_len;k+=channels) {
-							for(l=0;l<channels;l++) {
-								tmp = audio_buffer[k+l];
-								audio_buffer[k+l] =	preemphasis_coefficient_b*audio_buffer[k+l] -
-													preemphasis_coefficient_b*last_buffer_val[l] +
-													preemphasis_coefficient_a*last_buffer_val[l];
-								last_buffer_val[l] = tmp;
-								
-							}
-						}
-						
+                        //apply preemphasis
+                        int k;
+                        int l;
+                        float tmp;
+                        for(k=0;k<audio_len;k+=channels) {
+                            for(l=0;l<channels;l++) {
+                                tmp = audio_buffer[k+l];
+                                audio_buffer[k+l] = preemphasis_coefficient_b*audio_buffer[k+l] -
+                                                    preemphasis_coefficient_b*last_buffer_val[l] +
+                                                    preemphasis_coefficient_a*last_buffer_val[l];
+                                last_buffer_val[l] = tmp;
+                                
+                            }
+                        }
+                        
                         break;
                     }
                 }
