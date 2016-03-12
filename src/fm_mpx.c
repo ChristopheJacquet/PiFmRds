@@ -84,7 +84,7 @@ float *alloc_empty_buffer(size_t length) {
 }
 
 
-int fm_mpx_open(char *filename, size_t len, float preemphasis_corner_freq) {
+int fm_mpx_open(char *filename, size_t len, float cutoff_freq, float preemphasis_corner_freq) {
     length = len;
 
     if(filename != NULL) {
@@ -130,9 +130,7 @@ int fm_mpx_open(char *filename, size_t len, float preemphasis_corner_freq) {
         
     
         // Create the low-pass FIR filter
-        float cutoff_freq = 22050;
         if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2;
-    
     
     
         low_pass_fir[FIR_HALF_SIZE-1] = 2 * cutoff_freq / 228000 /2;

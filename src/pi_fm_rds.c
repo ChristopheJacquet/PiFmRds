@@ -310,7 +310,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, float preemphasis_cutoff) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, float cutoff, float preemphasis_cutoff) {
     // Catch all signals possible - it is vital we kill the DMA engine
     // on process exit!
     for (int i = 0; i < 64; i++) {
@@ -445,7 +445,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     int data_index = 0;
 
     // Initialize the baseband generator
-    if(fm_mpx_open(audio_file, DATA_SIZE, preemphasis_cutoff) < 0) return 1;
+    if(fm_mpx_open(audio_file, DATA_SIZE, cutoff, preemphasis_cutoff) < 0) return 1;
     
     // Initialize the RDS modulator
     char myps[9] = {0};
@@ -539,6 +539,9 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 #define PREEMPHASIS_EU 3185
 #define PREEMPHASIS_US 2120
 
+#define CUTOFF_COMPLIANT 15000
+#define CUTOFF_QUALITY 22050
+
 int main(int argc, char **argv) {
     char *audio_file = NULL;
     char *control_pipe = NULL;
@@ -547,6 +550,7 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+	float cutoff = CUTOFF_COMPLIANT;
 	float preemphasis_cutoff = PREEMPHASIS_US;
     
     
@@ -590,6 +594,16 @@ int main(int argc, char **argv) {
 			else {
 				preemphasis_cutoff = atof(param);
 			}
+		} else if(strcmp("-cutoff", arg)==0 && param != NULL) {
+			i++;
+			if(strcmp("compliant", param)==0) {
+				cutoff = CUTOFF_COMPLIANT;
+			} else if(strcmp("quality", param)==0) {
+				cutoff = CUTOFF_QUALITY;
+			}
+			else {
+				cutoff = atof(param);
+			}
         } else {
             fatal("Unrecognised argument: %s.\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
@@ -597,7 +611,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, preemphasis_cutoff);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, cutoff, preemphasis_cutoff);
     
     terminate(errcode);
 }
