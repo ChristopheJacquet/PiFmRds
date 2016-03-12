@@ -66,11 +66,13 @@ float fir_buffer_stereo[FIR_SIZE] = {0};
 int fir_index = 0;
 int channels;
 
+//3.185kHz for Europe, 2.120kHz for US
+const float PREEMPHASIS_US = 2120;
+const float PREEMPHASIS_EU = 3185;
 float *last_buffer_val;
 float preemphasis_corner_freq;
 float preemphasis_prewarp;
-float preemphasis_coefficient_a;
-float preemphasis_coefficient_b;
+float preemphasis_coefficient;
 
 SNDFILE *inf;
 
@@ -126,11 +128,10 @@ int fm_mpx_open(char *filename, size_t len) {
         last_buffer_val = (float*) malloc(sizeof(float)*channels);
         for(int i=0;i<channels;i++) last_buffer_val[i] = 0;
         
-        preemphasis_corner_freq = 2120; //3.185kHz for Europe, 2,120kHz for US
+        preemphasis_corner_freq = PREEMPHASIS_EU;
         preemphasis_prewarp = tan(PI*preemphasis_corner_freq/in_samplerate);
-        preemphasis_coefficient_a = (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp);
-        preemphasis_coefficient_b = (1.0 + preemphasis_coefficient_a)/2.0;
-        printf("Created preemphasis with \n%lf \n%lf \n%lf \n%lf", preemphasis_corner_freq, preemphasis_prewarp, preemphasis_coefficient_a, preemphasis_coefficient_b);
+        preemphasis_coefficient = (1.0 + (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp))/2.0;
+        printf("Created preemphasis with with cutoff at %.1f Hz\n", preemphasis_corner_freq);
         
     
         // Create the low-pass FIR filter
@@ -204,11 +205,8 @@ int fm_mpx_get_samples(float *mpx_buffer) {
                         for(k=0;k<audio_len;k+=channels) {
                             for(l=0;l<channels;l++) {
                                 tmp = audio_buffer[k+l];
-                                audio_buffer[k+l] = preemphasis_coefficient_b*audio_buffer[k+l] -
-                                                    preemphasis_coefficient_b*last_buffer_val[l] +
-                                                    preemphasis_coefficient_a*last_buffer_val[l];
+                                audio_buffer[k+l] = audio_buffer[k+l] - preemphasis_coefficient*last_buffer_val[l];
                                 last_buffer_val[l] = tmp;
-                                
                             }
                         }
                         
