@@ -168,7 +168,7 @@ int fm_mpx_get_samples(float *mpx_buffer) {
         if(audio_pos >= downsample_factor) {
             audio_pos -= downsample_factor;
             
-            if(audio_len == 0) {
+            if(audio_len <= channels ) {
                 for(int j=0; j<2; j++) { // one retry
                     audio_len = sf_read_float(inf, audio_buffer, length);
                     if (audio_len < 0) {
