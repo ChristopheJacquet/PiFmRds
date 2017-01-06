@@ -65,6 +65,7 @@ float fir_buffer_left[FIR_SIZE] = {0};
 float fir_buffer_right[FIR_SIZE] = {0};
 int fir_index = 0;
 int channels;
+float left_max=1, right_max=1;  // start compressor with low gain 
 
 SNDFILE *inf;
 
@@ -250,7 +251,51 @@ int fm_mpx_get_samples(float *mpx_buffer) {
             out_left+=low_pass_fir[ iphase + (FIR_PHASES*fi) ] * fir_buffer_left[(fir_index-fi)&(FIR_SIZE-1)];
           }
         }
-        
+
+        // Simple broadcast compressor
+        // 
+        // The goal is to get the loudest sounding audio while 
+        // keeping the deviation within legal limits, and 
+        // without degrading the audio quality significantly.  
+        // Don't expect this simple code to match the 
+        // performance of commercial broadcast equipment. 
+        float left_abs, right_abs;
+        float compressor_decay=0.999995; 
+        float compressor_attack=1.0;
+        // Setting attack to anything other than 1.0 could cause overshoot.
+        float compressor_max_gain_recip=0.01;
+        left_abs=fabsf(out_left);
+        if( left_abs>left_max ) 
+        {
+           left_max+= (left_abs-left_max)*compressor_attack; 
+        }
+        else
+        {
+           left_max*=compressor_decay; 
+        }
+
+        if( channels > 1 )
+        {
+          right_abs=fabsf(out_right);
+          if( right_abs>right_max ) 
+          {
+             right_max+= (right_abs-right_max)*compressor_attack;
+          }
+          else
+          {
+             right_max*=compressor_decay;
+          }
+          if( 1 )// Experimental joint compressor mode
+          {
+              if( left_max > right_max ) 
+                  right_max=left_max;
+              else if( left_max < right_max ) 
+                  left_max=right_max;
+          }
+          out_right=out_right/(right_max+compressor_max_gain_recip);
+        }
+        out_left= out_left/(left_max+compressor_max_gain_recip); // Adjust volume with limited maximum gain
+ 
         // Generate the stereo mpx
         if( channels > 1 ) {
             mpx_buffer[i] +=  4.05*(out_left+out_right) + // Stereo sum signal
