@@ -117,13 +117,13 @@ int fm_mpx_open(char *filename, size_t len) {
         }
     
         // Choose a cutoff frequency for the low-pass FIR filter
-        float cutoff_freq = 15000;
+        float cutoff_freq = 15700;
         if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2 * .8;
    
 
         // Create the low-pass FIR filter, with pre-emphasis
         double window, firlowpass, firpreemph , sincpos;
-        double gain=FIR_PHASES/25.0;
+        double gain=FIR_PHASES/25.0; // Why??? Maybe gain adjustment for preemphais
 
         // IIR pre-emphasis filter
         // Reference material:    http://jontio.zapto.org/hda1/preempiir.pdf
