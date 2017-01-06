@@ -45,7 +45,7 @@
  * The idea of feeding the PWM FIFO in order to pace DMA control blocks comes
  * from ServoBlaster, and I take credit for that :-)
  *
- * This code uses DMA channel 0 and the PWM hardware, with no regard for
+ * This code uses DMA channel 5 and the PWM hardware, with no regard for
  * whether something else might be trying to use it at the same time (such as
  * the 3.5mm jack audio driver).
  *
@@ -140,8 +140,9 @@
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
 
+#define DMA_NUMBER         5
 #define DMA_BASE_OFFSET        0x00007000
-#define DMA_LEN            0x24
+#define DMA_LEN            0xe24
 #define PWM_BASE_OFFSET        0x0020C000
 #define PWM_LEN            0x28
 #define CLK_BASE_OFFSET            0x00101000
@@ -323,6 +324,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     }
         
     dma_reg = map_peripheral(DMA_VIRT_BASE, DMA_LEN);
+    dma_reg = dma_reg+((0x100/sizeof(int))*(DMA_NUMBER));
     pwm_reg = map_peripheral(PWM_VIRT_BASE, PWM_LEN);
     clk_reg = map_peripheral(CLK_VIRT_BASE, CLK_LEN);
     gpio_reg = map_peripheral(GPIO_VIRT_BASE, GPIO_LEN);
