@@ -146,7 +146,7 @@
 #define PWM_BASE_OFFSET        0x0020C000
 #define PWM_LEN            0x28
 #define CLK_BASE_OFFSET            0x00101000
-#define CLK_LEN            0xA8
+#define CLK_LEN            0x1300
 #define GPIO_BASE_OFFSET    0x00200000
 #define GPIO_LEN        0x100
 
@@ -170,9 +170,16 @@
 #define PWMCLK_DIV        41
 
 #define CM_GP0DIV (0x7e101074)
+#define CM_PLLCFRAC  (0x7e102220)
 
+#define CORECLK_CNTL      (0x08/4)
+#define CORECLK_DIV       (0x0c/4)
 #define GPCLK_CNTL        (0x70/4)
-#define GPCLK_DIV        (0x74/4)
+#define GPCLK_DIV         (0x74/4)
+#define EMMCCLK_CNTL     (0x1C0/4)
+#define EMMCCLK_DIV      (0x1C4/4)
+#define PLLC_CTRL       (0x1120/4)
+#define PLLC_FRAC       (0x1220/4)
 
 #define PWMCTL_MODE1        (1<<1)
 #define PWMCTL_PWEN1        (1<<0)
@@ -188,9 +195,10 @@
 
 #define PLLFREQ            500000000.    // PLLD is running at 500MHz
 
-// The deviation specifies how wide the signal is. Use 25.0 for WBFM
-// (broadcast radio) and about 3.5 for NBFM (walkie-talkie style radio)
-#define DEVIATION        25.0
+// The deviation specifies how wide the signal is. 
+// Use 75kHz for WBFM (broadcast radio) 
+// and about 2.5kHz for NBFM (walkie-talkie style radio)
+#define DEVIATION        75000
 
 
 typedef struct {
@@ -225,6 +233,135 @@ struct control_data_s {
 #define NUM_PAGES    ((sizeof(struct control_data_s) + PAGE_SIZE - 1) >> PAGE_SHIFT)
 
 static struct control_data_s *ctl;
+
+static void
+print_clock_tree(void)
+{
+
+   if( clk_reg==NULL ) return;
+#define PLLA_CTRL (0x1100/4)
+#define PLLA_FRAC (0x1200/4)
+#define PLLA_DSI0 (0x1300/4)
+#define PLLA_CORE (0x1400/4)
+#define PLLA_PER  (0x1500/4)
+#define PLLA_CCP2 (0x1600/4)
+
+#define PLLB_CTRL  (0x11e0/4)
+#define PLLB_FRAC  (0x12e0/4)
+#define PLLB_ARM   (0x13e0/4)
+#define PLLB_SP0   (0x14e0/4)
+#define PLLB_SP1   (0x15e0/4)
+#define PLLB_SP2   (0x16e0/4)
+
+#define PLLC_CTRL  (0x1120/4)
+#define PLLC_FRAC  (0x1220/4)
+#define PLLC_CORE2 (0x1320/4)
+#define PLLC_CORE1 (0x1420/4)
+#define PLLC_PER   (0x1520/4)
+#define PLLC_CORE0 (0x1620/4)
+
+#define PLLD_CTRL (0x1140/4)
+#define PLLD_FRAC (0x1240/4)
+#define PLLD_DSI0 (0x1340/4)
+#define PLLD_CORE (0x1440/4)
+#define PLLD_PER  (0x1540/4)
+#define PLLD_DSI1 (0x1640/4)
+
+#define PLLH_CTRL (0x1160/4)
+#define PLLH_FRAC (0x1260/4)
+#define PLLH_AUX  (0x1360/4)
+#define PLLH_RCAL (0x1460/4)
+#define PLLH_PIX  (0x1560/4)
+#define PLLH_STS  (0x1660/4)
+
+#define XOSC_CTRL (0x1190/4)
+   printf("PLLC_DIG0=%08x\n",clk_reg[(0x1020/4)]);
+   printf("PLLC_DIG1=%08x\n",clk_reg[(0x1024/4)]);
+   printf("PLLC_DIG2=%08x\n",clk_reg[(0x1028/4)]);
+   printf("PLLC_DIG3=%08x\n",clk_reg[(0x102c/4)]);
+   printf("PLLC_ANA0=%08x\n",clk_reg[(0x1030/4)]);
+   printf("PLLC_ANA1=%08x\n",clk_reg[(0x1034/4)]);
+   printf("PLLC_ANA2=%08x\n",clk_reg[(0x1038/4)]);
+   printf("PLLC_ANA3=%08x\n",clk_reg[(0x103c/4)]);
+   printf("PLLC_DIG0R=%08x\n",clk_reg[(0x1820/4)]);
+   printf("PLLC_DIG1R=%08x\n",clk_reg[(0x1824/4)]);
+   printf("PLLC_DIG2R=%08x\n",clk_reg[(0x1828/4)]);
+   printf("PLLC_DIG3R=%08x\n",clk_reg[(0x182c/4)]);
+
+   printf("GNRIC CTL=%08x DIV=%8x  ",clk_reg[ 0],clk_reg[ 1]);
+   printf("VPU   CTL=%08x DIV=%8x\n",clk_reg[ 2],clk_reg[ 3]);
+   printf("SYS   CTL=%08x DIV=%8x  ",clk_reg[ 4],clk_reg[ 5]);
+   printf("PERIA CTL=%08x DIV=%8x\n",clk_reg[ 6],clk_reg[ 7]);
+   printf("PERII CTL=%08x DIV=%8x  ",clk_reg[ 8],clk_reg[ 9]);
+   printf("H264  CTL=%08x DIV=%8x\n",clk_reg[10],clk_reg[11]);
+   printf("ISP   CTL=%08x DIV=%8x  ",clk_reg[12],clk_reg[13]);
+   printf("V3D   CTL=%08x DIV=%8x\n",clk_reg[14],clk_reg[15]);
+
+   printf("CAM0  CTL=%08x DIV=%8x  ",clk_reg[16],clk_reg[17]);
+   printf("CAM1  CTL=%08x DIV=%8x\n",clk_reg[18],clk_reg[19]);
+   printf("CCP2  CTL=%08x DIV=%8x  ",clk_reg[20],clk_reg[21]);
+   printf("DSI0E CTL=%08x DIV=%8x\n",clk_reg[22],clk_reg[23]);
+   printf("DSI0P CTL=%08x DIV=%8x  ",clk_reg[24],clk_reg[25]);
+   printf("DPI   CTL=%08x DIV=%8x\n",clk_reg[26],clk_reg[27]);
+   printf("GP0   CTL=%08x DIV=%8x  ",clk_reg[28],clk_reg[29]);
+   printf("GP1   CTL=%08x DIV=%8x\n",clk_reg[30],clk_reg[31]);
+
+   printf("GP2   CTL=%08x DIV=%8x  ",clk_reg[32],clk_reg[33]);
+   printf("HSM   CTL=%08x DIV=%8x\n",clk_reg[34],clk_reg[35]);
+   printf("OTP   CTL=%08x DIV=%8x  ",clk_reg[36],clk_reg[37]);
+   printf("PCM   CTL=%08x DIV=%8x\n",clk_reg[38],clk_reg[39]);
+   printf("PWM   CTL=%08x DIV=%8x  ",clk_reg[40],clk_reg[41]);
+   printf("SLIM  CTL=%08x DIV=%8x\n",clk_reg[42],clk_reg[43]);
+   printf("SMI   CTL=%08x DIV=%8x  ",clk_reg[44],clk_reg[45]);
+   printf("SMPS  CTL=%08x DIV=%8x\n",clk_reg[46],clk_reg[47]);
+
+   printf("TCNT  CTL=%08x DIV=%8x  ",clk_reg[48],clk_reg[49]);
+   printf("TEC   CTL=%08x DIV=%8x\n",clk_reg[50],clk_reg[51]);
+   printf("TD0   CTL=%08x DIV=%8x  ",clk_reg[52],clk_reg[53]);
+   printf("TD1   CTL=%08x DIV=%8x\n",clk_reg[54],clk_reg[55]);
+
+   printf("TSENS CTL=%08x DIV=%8x  ",clk_reg[56],clk_reg[57]);
+   printf("TIMER CTL=%08x DIV=%8x\n",clk_reg[58],clk_reg[59]);
+   printf("UART  CTL=%08x DIV=%8x  ",clk_reg[60],clk_reg[61]);
+   printf("VEC   CTL=%08x DIV=%8x\n",clk_reg[62],clk_reg[63]);
+
+   printf("PULSE CTL=%08x DIV=%8x  ",clk_reg[100],clk_reg[101]);
+   printf("PLLT  CTL=%08x DIV=????????\n",clk_reg[76]);
+
+   printf("DSI1E CTL=%08x DIV=%8x  ",clk_reg[86],clk_reg[87]);
+   printf("DSI1P CTL=%08x DIV=%8x\n",clk_reg[88],clk_reg[89]);
+   printf("AVE0  CTL=%08x DIV=%8x\n",clk_reg[90],clk_reg[91]);
+
+   printf("SDC   CTL=%08x DIV=%8x  ",clk_reg[106],clk_reg[107]);
+   printf("ARM   CTL=%08x DIV=%8x\n",clk_reg[108],clk_reg[109]);
+   printf("AVE0  CTL=%08x DIV=%8x  ",clk_reg[110],clk_reg[111]);
+   printf("EMMC  CTL=%08x DIV=%8x\n",clk_reg[112],clk_reg[113]);
+
+   // Sometimes calculated frequencies are off by a factor of 2
+   // ANA1 bit 14 may indicate that a /2 prescaler is active
+   printf("PLLA PDIV=%d NDIV=%d FRAC=%d  ",(clk_reg[PLLA_CTRL]>>16) ,clk_reg[PLLA_CTRL]&0x3ff, clk_reg[PLLA_FRAC] );
+   printf(" %f MHz\n",19.2* ((float)(clk_reg[PLLA_CTRL]&0x3ff) + ((float)clk_reg[PLLA_FRAC])/((float)(1<<20))) );
+   printf("DSI0=%d CORE=%d PER=%d CCP2=%d\n\n",clk_reg[PLLA_DSI0],clk_reg[PLLA_CORE],clk_reg[PLLA_PER],clk_reg[PLLA_CCP2]);
+
+
+   printf("PLLB PDIV=%d NDIV=%d FRAC=%d  ",(clk_reg[PLLB_CTRL]>>16) ,clk_reg[PLLB_CTRL]&0x3ff, clk_reg[PLLB_FRAC] );
+   printf(" %f MHz\n",19.2* ((float)(clk_reg[PLLB_CTRL]&0x3ff) + ((float)clk_reg[PLLB_FRAC])/((float)(1<<20))) );
+   printf("ARM=%d SP0=%d SP1=%d SP2=%d\n\n",clk_reg[PLLB_ARM],clk_reg[PLLB_SP0],clk_reg[PLLB_SP1],clk_reg[PLLB_SP2]);
+
+   printf("PLLC PDIV=%d NDIV=%d FRAC=%d  ",(clk_reg[PLLC_CTRL]>>16) ,clk_reg[PLLC_CTRL]&0x3ff, clk_reg[PLLC_FRAC] );
+   printf(" %f MHz\n",19.2* ((float)(clk_reg[PLLC_CTRL]&0x3ff) + ((float)clk_reg[PLLC_FRAC])/((float)(1<<20))) );
+   printf("CORE2=%d CORE1=%d PER=%d CORE0=%d\n\n",clk_reg[PLLC_CORE2],clk_reg[PLLC_CORE1],clk_reg[PLLC_PER],clk_reg[PLLC_CORE0]);
+
+   printf("PLLD PDIV=%d NDIV=%d FRAC=%d  ",(clk_reg[PLLD_CTRL]>>16) ,clk_reg[PLLD_CTRL]&0x3ff, clk_reg[PLLD_FRAC] );
+   printf(" %f MHz\n",19.2* ((float)(clk_reg[PLLD_CTRL]&0x3ff) + ((float)clk_reg[PLLD_FRAC])/((float)(1<<20))) );
+   printf("DSI0=%d CORE=%d PER=%d DSI1=%d\n\n",clk_reg[PLLD_DSI0],clk_reg[PLLD_CORE],clk_reg[PLLD_PER],clk_reg[PLLD_DSI1]);
+
+   printf("PLLH PDIV=%d NDIV=%d FRAC=%d  ",(clk_reg[PLLH_CTRL]>>16) ,clk_reg[PLLH_CTRL]&0x3ff, clk_reg[PLLH_FRAC] );
+   printf(" %f MHz\n",19.2* ((float)(clk_reg[PLLH_CTRL]&0x3ff) + ((float)clk_reg[PLLH_FRAC])/((float)(1<<20))) );
+   printf("AUX=%d RCAL=%d PIX=%d STS=%d\n\n",clk_reg[PLLH_AUX],clk_reg[PLLH_RCAL],clk_reg[PLLH_PIX],clk_reg[PLLH_STS]);
+
+
+}
 
 static void
 udelay(int us)
@@ -312,7 +449,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, uint32_t divider, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
     // Catch all signals possible - it is vital we kill the DMA engine
     // on process exit!
     for (int i = 0; i < 64; i++) {
@@ -349,24 +486,68 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     printf("virt_addr = %p\n", mbox.virt_addr);
     
 
+    uint32_t freq_ctl;
+    if( divider ) // PLL modulation
+    {
+       // switch the core over to PLLA
+       clk_reg[CORECLK_DIV]  = (0x5a<<24) | (4<<12) ; // core div 4
+       udelay(100);
+       clk_reg[CORECLK_CNTL] = (0x5a<<24) | (1<<4) | (4); // run, src=PLLA
+
+       // switch the EMMC over to PLLD
+       // FIXME should also adjust divider to keep same frequency
+       // or possibly not if the gpu decides to change clocks due to low voltage
+       // TODO  put clocks back to their original state when we are done?
+       int clktmp;
+       clktmp = clk_reg[EMMCCLK_CNTL];
+       clk_reg[EMMCCLK_CNTL] = (0xF0F&clktmp) | (0x5a<<24) ; // clear run
+       udelay(100);
+       clk_reg[EMMCCLK_CNTL] = (0xF00&clktmp) | (0x5a<<24) | (6); // src=PLLD
+       udelay(100);
+       clk_reg[EMMCCLK_CNTL] = (0xF00&clktmp) | (0x5a<<24) | (1<<4) | (6); // run , src=PLLD
+
+       // Adjust PLLC frequency
+       freq_ctl = (unsigned int)(((carrier_freq*divider)/19.2e6)*((double)(1<<20))) ; // todo PPM
+       clk_reg[PLLC_CTRL] = (0x5a<<24) | (0x21<<12) | (freq_ctl>>20 ); // integer part
+       freq_ctl&=0xFFFFF;
+       clk_reg[PLLC_FRAC] = (0x5a<<24) | (freq_ctl&0xFFFFC) ; // fractional part
+       udelay(1000);
+
+       // Program GPCLK integer division
+       clktmp = clk_reg[GPCLK_CNTL];
+       clk_reg[GPCLK_CNTL] = (0xF0F&clktmp) | (0x5a<<24) ; // clear run
+       udelay(100);
+       clk_reg[GPCLK_DIV]  = (0x5a<<24) | (divider<<12); 
+       udelay(100);
+       clk_reg[GPCLK_CNTL] = (0x5a<<24) | (5); // src=PLLC
+       udelay(100);
+       clk_reg[GPCLK_CNTL] = (0x5a<<24) | (1<<4) | (5); // run , src=PLLC
+
+
+
+
+    }
+    else  // MASH modulation
+    {
+       // Program GPCLK to use MASH setting 1, so fractional dividers work
+       clk_reg[GPCLK_CNTL] = 0x5A << 24 | 6;  // src 6 = PLLD
+       udelay(100);
+       clk_reg[GPCLK_CNTL] = 0x5A << 24 | 1 << 9 | 1 << 4 | 6;
+
+
+       // Calculate the frequency control word
+       // The fractional part is stored in the lower 12 bits
+       freq_ctl = ((float)(PLLFREQ / carrier_freq)) * ( 1 << 12 ); //PLLD=500MHz
+    }
+
     // GPIO4 needs to be ALT FUNC 0 to output the clock
     gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (4 << 12);
 
-    // Program GPCLK to use MASH setting 1, so fractional dividers work
-    clk_reg[GPCLK_CNTL] = 0x5A << 24 | 6;
-    udelay(100);
-    clk_reg[GPCLK_CNTL] = 0x5A << 24 | 1 << 9 | 1 << 4 | 6;
 
     ctl = (struct control_data_s *) mbox.virt_addr;
     dma_cb_t *cbp = ctl->cb;
-    uint32_t phys_sample_dst = CM_GP0DIV;
+    uint32_t phys_sample_dst = divider ? CM_PLLCFRAC : CM_GP0DIV;
     uint32_t phys_pwm_fifo_addr = PWM_PHYS_BASE + 0x18;
-
-
-    // Calculate the frequency control word
-    // The fractional part is stored in the lower 12 bits
-    uint32_t freq_ctl = ((float)(PLLFREQ / carrier_freq)) * ( 1 << 12 );
-
 
     for (int i = 0; i < NUM_SAMPLES; i++) {
         ctl->sample[i] = 0x5a << 24 | freq_ctl;    // Silence
@@ -405,12 +586,12 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     //
     // So we use the 'ppm' parameter to compensate for the oscillator error
 
-    float divider = (500000./(2*228*(1.+ppm/1.e6)));
-    uint32_t idivider = (uint32_t) divider;
-    uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
+    float srdivider = (500000./(2*228*(1.+ppm/1.e6)));
+    uint32_t idivider = (uint32_t) srdivider;
+    uint32_t fdivider = (uint32_t) ((srdivider - idivider)*pow(2, 12));
     
     printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912].\n", 
-                ppm, divider, idivider, fdivider);
+                ppm, srdivider, idivider, fdivider);
 
     pwm_reg[PWM_CTL] = 0;
     udelay(10);
@@ -480,6 +661,21 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     
     printf("Starting to transmit on %3.1f MHz.\n", carrier_freq/1e6);
 
+
+    float deviation_scale_factor;
+    if( divider ) // PLL modulation
+    {   // note samples are [-10:10]
+        deviation_scale_factor=  0.1 * (divider*DEVIATION/  (19.2e6/((double)(1<<20))) ) ; // todo PPM
+    }
+    else // MASH modulation
+    {   
+        double normdivider=((double)PLLFREQ / (double)carrier_freq) * ( 1 << 12 ); //PLLD=500MHz
+        double lowdivider=((double)PLLFREQ / (((double)carrier_freq)+(DEVIATION))) * ( 1 << 12 ); 
+        deviation_scale_factor= 0.1 * (normdivider-lowdivider);
+    }
+    //printf("deviation_scale_factor = %f \n", deviation_scale_factor);
+
+
     for (;;) {
         // Default (varying) PS
         if(varying_ps) {
@@ -505,7 +701,6 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         int last_sample = (last_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
         int this_sample = (cur_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
         int free_slots = this_sample - last_sample;
-
         if (free_slots < 0)
             free_slots += NUM_SAMPLES;
 
@@ -519,15 +714,23 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
                 data_index = 0;
             }
             
-            float dval = data[data_index] * (DEVIATION / 10.);
+            float dval = data[data_index]*deviation_scale_factor;
+            int intval;
+            if( divider ) // PLL modulation
+            {
+              intval = ( (int)((floor)(dval)) & ~0x3 ) ; 
+              // clock settings from boot code seem to always leave 2 lsb clear 
+            }
+            else // MASH modulation
+            { 
+               intval = (int)((floor)(dval)) ;
+            }
             data_index++;
             data_len--;
 
-            int intval = (int)((floor)(dval));
-            //int frac = (int)((dval - (float)intval) * SUBSIZE);
 
 
-            ctl->sample[last_sample++] = (0x5A << 24 | freq_ctl) + intval; //(frac > j ? intval + 1 : intval);
+            ctl->sample[last_sample++] = ( 0x5A << 24 | freq_ctl) + intval;
             if (last_sample == NUM_SAMPLES)
                 last_sample = 0;
 
@@ -547,6 +750,7 @@ int main(int argc, char **argv) {
     char *ps = NULL;
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
+    uint32_t mash = -1;
     float ppm = 0;
     
     
@@ -580,14 +784,81 @@ int main(int argc, char **argv) {
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
+        } else if(strcmp("-mash", arg)==0 ) {
+            i++;
+            mash=1;
         } else {
             fatal("Unrecognised argument: %s.\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
-            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
+            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe] [-mash]\n", arg);
         }
     }
+
+
+    // Choose an integer divider for GPCLK0
+    // 
+    // There may be improvements possible to this algorithm. 
+    double xtal_freq_recip=1.0/19.2e6; // todo PPM correction 
+    int best_divider=0;
+
+    // Optional loop to print tuning solutions for all FM frequencies
+    //for( carrier_freq=76000000 ; carrier_freq<108000000 ; carrier_freq+=100000 )
+    {
+      int solution_count=0;
+      printf("carrier:%3.2f ",carrier_freq/1e6);
+      int divider,min_int_multiplier,max_int_multiplier, fom, int_multiplier, best_fom=0;
+      double frac_multiplier;
+      best_divider=0;
+      for( divider=2;divider<20;divider+=1) // do odd dividers have worse 2nd harmonic?
+      {
+        if( carrier_freq*divider <  760e6 ) continue; // widest accepted frequency range
+        if( carrier_freq*divider > 1300e6 ) break;
+
+        max_int_multiplier=((int)((double)(carrier_freq+100000)*divider*xtal_freq_recip));
+        min_int_multiplier=((int)((double)(carrier_freq-100000)*divider*xtal_freq_recip));
+        if( min_int_multiplier!=max_int_multiplier ) continue; // don't cross integer boundary
+
+        solution_count++;  // if we make it here the solution is acceptable, 
+        fom=0;             // but we want a good solution
+
+        if( carrier_freq*divider >  900e6 ) fom++; // prefer freqs closer to 1000
+        if( carrier_freq*divider < 1100e6 ) fom++;
+        if( carrier_freq*divider >  800e6 ) fom++; // accepted frequency range
+        if( carrier_freq*divider < 1200e6 ) fom++;
+        
+
+        frac_multiplier=((double)(carrier_freq)*divider*xtal_freq_recip);
+        int_multiplier = (int) frac_multiplier;
+        frac_multiplier = frac_multiplier - int_multiplier;
+        if( (frac_multiplier>0.2) && (frac_multiplier<0.8) ) fom++; // prefer mulipliers away from integer boundaries 
+
+
+        if( divider%2 == 0 ) fom+=2; // prefer even dividers
+                                     // do odd dividers have worse 2nd harmonic?
+
+
+        //printf(" multiplier:%f divider:%d VCO: %4.1fMHz\n",carrier_freq*divider*xtal_freq_recip,divider,(double)carrier_freq*divider/1e6);
+
+        if( fom > best_fom )
+        {
+            best_fom=fom;
+            best_divider=divider;
+        }
+      }
+      printf(" multiplier:%f divider:%d VCO: %4.1fMHz\n",carrier_freq*best_divider*xtal_freq_recip,best_divider,(double)carrier_freq*best_divider/1e6);
     
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+      if( solution_count==0) 
+            printf("No tuning solution found. (76.8 and 96.0 are not supported.)\n");
+
+    }// Optional loop to print tuning solutions
+
+    if( best_divider==0) return -1 ; 
+
+    if( mash!=-1 )
+    {
+       best_divider=0;  // if divider=0,  use MASH divider instead of PLL modulation
+    }
+    int errcode = tx(carrier_freq, best_divider, audio_file, pi, ps, rt, ppm, control_pipe);
     
     terminate(errcode);
 }
