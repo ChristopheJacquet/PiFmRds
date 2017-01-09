@@ -397,6 +397,8 @@ terminate(int num)
         mem_free(mbox.handle, mbox.mem_ref);
     }
 
+    print_clock_tree();
+
     printf("Terminating: cleanly deactivated the DMA engine and killed the carrier.\n");
     
     exit(num);
@@ -814,8 +816,8 @@ int main(int argc, char **argv) {
         if( carrier_freq*divider <  760e6 ) continue; // widest accepted frequency range
         if( carrier_freq*divider > 1300e6 ) break;
 
-        max_int_multiplier=((int)((double)(carrier_freq+100000)*divider*xtal_freq_recip));
-        min_int_multiplier=((int)((double)(carrier_freq-100000)*divider*xtal_freq_recip));
+        max_int_multiplier=((int)((double)(carrier_freq+10+DEVIATION)*divider*xtal_freq_recip));
+        min_int_multiplier=((int)((double)(carrier_freq-10-DEVIATION)*divider*xtal_freq_recip));
         if( min_int_multiplier!=max_int_multiplier ) continue; // don't cross integer boundary
 
         solution_count++;  // if we make it here the solution is acceptable, 
@@ -833,12 +835,11 @@ int main(int argc, char **argv) {
         if( (frac_multiplier>0.2) && (frac_multiplier<0.8) ) fom++; // prefer mulipliers away from integer boundaries 
 
 
-        if( divider%2 == 0 ) fom+=2; // prefer even dividers
-                                     // do odd dividers have worse 2nd harmonic?
+        if( divider%2 == 1 ) fom+=2; // prefer odd dividers
+                                     // odd dividers seem to have 6dB lower 2nd harmonic
 
 
         //printf(" multiplier:%f divider:%d VCO: %4.1fMHz\n",carrier_freq*divider*xtal_freq_recip,divider,(double)carrier_freq*divider/1e6);
-
         if( fom > best_fom )
         {
             best_fom=fom;
