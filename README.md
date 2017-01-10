@@ -12,14 +12,13 @@ This version modulates the PLL instead of the clock divider for superior signal 
 
 TODO list
 
-watchdog for PLL settings (the GPU changes them sometimes, like brownout)
-( force_turbo=1 may help prevent this)
+watchdog for PLL settings to prevent radio interference
 
 measure PLL loop filter response
 
 It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
 
-It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2 and 3.
+It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2 and 3.  Users of Raspberry Pi 3 should add gpu_freq=250 to /boot/config.txt .  The Pi 3 has very sensitive low voltage detection. When low voltage is detected, clocks are reduced to safe values in an attempt to prevent crashes. This program changes clocks to generate the desired radio frequency without the knowledge of the power management system. While it would be possible to detect and undo changes, this would cause radio interference each time it happens. Setting gpu_freq=250 appears to prevent undesired clock changes because the normal value and safe value are the same. 
 
 ![](doc/vfd_display.jpg)
 
