@@ -672,8 +672,10 @@ int tx(uint32_t carrier_freq, uint32_t divider, char *audio_file, uint16_t pi, c
     else // MASH modulation
     {   
         double normdivider=((double)PLLFREQ / (double)carrier_freq) * ( 1 << 12 ); //PLLD=500MHz
-        double lowdivider=((double)PLLFREQ / (((double)carrier_freq)+(DEVIATION))) * ( 1 << 12 ); 
-        deviation_scale_factor= 0.1 * (normdivider-lowdivider);
+        double highdivider=((double)PLLFREQ / (((double)carrier_freq)+(DEVIATION))) * ( 1 << 12 ); 
+        deviation_scale_factor= 0.1 * (highdivider-normdivider);
+        // Scaling factor for mash is negative because 
+        // a higher division ratio equals a lower frequency. 
     }
     //printf("deviation_scale_factor = %f \n", deviation_scale_factor);
 
@@ -811,7 +813,7 @@ int main(int argc, char **argv) {
       int divider,min_int_multiplier,max_int_multiplier, fom, int_multiplier, best_fom=0;
       double frac_multiplier;
       best_divider=0;
-      for( divider=2;divider<20;divider+=1) // do odd dividers have worse 2nd harmonic?
+      for( divider=2;divider<20;divider+=1)
       {
         if( carrier_freq*divider <  760e6 ) continue; // widest accepted frequency range
         if( carrier_freq*divider > 1300e6 ) break;
