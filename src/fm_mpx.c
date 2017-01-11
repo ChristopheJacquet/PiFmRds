@@ -36,13 +36,12 @@
 
 
 #define FIR_PHASES    (32)
-#define FIR_SIZE    (1024)   // MUST be a power of 2 for the circular buffer
-#define FIR_TAPS    (FIR_SIZE/FIR_PHASES)
+#define FIR_TAPS      (32) // MUST be a power of 2 for the circular buffer
 
 size_t length;
 
 // coefficients of the low-pass FIR filter
-float low_pass_fir[FIR_SIZE];
+float low_pass_fir[FIR_PHASES][FIR_TAPS];
 
 
 float carrier_38[] = {0.0, 0.8660254037844386, 0.8660254037844388, 1.2246467991473532e-16, -0.8660254037844384, -0.8660254037844386};
@@ -61,8 +60,8 @@ int audio_index = 0;
 int audio_len = 0;
 float audio_pos;
 
-float fir_buffer_left[FIR_SIZE] = {0};
-float fir_buffer_right[FIR_SIZE] = {0};
+float fir_buffer_left[FIR_TAPS] = {0};
+float fir_buffer_right[FIR_TAPS] = {0};
 int fir_index = 0;
 int channels;
 float left_max=1, right_max=1;  // start compressor with low gain 
@@ -140,9 +139,11 @@ int fm_mpx_open(char *filename, size_t len) {
         b1=( 2.0*bp + 1/(in_samplerate*FIR_PHASES) )/(2.0*bp + 1/(in_samplerate*FIR_PHASES) );
         double x=0,y=0;
  
-        for(int i=1; i<=FIR_SIZE; i++) {   // match indexing of Matlab script
-            sincpos = i-((FIR_SIZE+1.0)/2.0); // offset by 0.5 so sincpos!=0 (causes NaN x/0 )
-            //printf("%d=%f ", i,sincpos); 
+        for(int i=0; i<FIR_TAPS; i++) { 
+         for(int j=0; j<FIR_PHASES; j++) {
+            int mi=i*FIR_PHASES + j+1;// match indexing of Matlab script
+            sincpos = (mi)-(((FIR_TAPS*FIR_PHASES)+1.0)/2.0); // offset by 0.5 so sincpos!=0 (causes NaN x/0 )
+            //printf("%d=%f \n",mi ,sincpos); 
             firlowpass = sin(2 * PI * cutoff_freq * sincpos / (in_samplerate*FIR_PHASES) ) / (PI * sincpos) ; 
 
             y=a0*firlowpass + a1*x + b1*y ; // Find the combined impulse response
@@ -150,19 +151,20 @@ int fm_mpx_open(char *filename, size_t len) {
             firpreemph=y;                   // y could be replaced by firpreemph but this
                                             // matches the example in the reference material
 
-            window = (.54 - .46 * cos(2*PI * (i) / (double) FIR_SIZE )) ; // Hamming window
-            low_pass_fir[i-1] = firpreemph * window * gain ; // store with C indexing
-        } 
+            window = (.54 - .46 * cos(2*PI * (i) / (double) FIR_TAPS*FIR_PHASES )) ; // Hamming window
+            low_pass_fir[j][i] = firpreemph * window * gain ; 
+          }
+        }
     
         printf("Created low-pass FIR filter for audio channels, with cutoff at %.1f Hz\n", cutoff_freq);
     
         if( 0 )
         {
           printf("f = [ ");
-          for(int i=0; i<FIR_SIZE; i++)
-          {
-            printf("%.5f ", low_pass_fir[i]);
-            //printf("%i %.5f \n", i,low_pass_fir[i]);
+          for(int i=0; i<FIR_TAPS; i++) { 
+            for(int j=0; j<FIR_PHASES; j++) {
+              printf("%.5f ", low_pass_fir[j][i]);
+            }
           }
           printf("]; \n");
         }
@@ -215,7 +217,7 @@ int fm_mpx_get_samples(float *mpx_buffer) {
             }
 
            fir_index++;  // fir_index will point to newest valid data soon
-           if(fir_index >= FIR_SIZE) fir_index = 0; 
+           if(fir_index >= FIR_TAPS) fir_index = 0; 
            // Store the current sample(s) into the FIR filter's ring buffer
            fir_buffer_left[fir_index] = audio_buffer[audio_index];
            if(channels > 1) { 
@@ -232,23 +234,21 @@ int fm_mpx_get_samples(float *mpx_buffer) {
         //int iphase=FIR_PHASES-1;  // test override
         //printf("%d %d \n",fir_index,iphase); // diagnostics
 	// Sanity checks
-        if ( iphase < 0 ) {iphase=0; printf("low\n"); }
+        if ( iphase < 0 ) {iphase=0; printf("low\n"); }// Seems to run faster with these checks in place
         if ( iphase >= FIR_PHASES ) {iphase=FIR_PHASES-2; printf("high\n"); }
-        int fir_start = (fir_index - FIR_TAPS);
-        if( fir_start < 0 )  fir_start+=FIR_SIZE;
         if( channels > 1 )
         {
           for(int fi=0; fi<FIR_TAPS; fi++)  // fi = Filter Index
           {                                 // use bit masking to implement circular buffer
-            out_left +=low_pass_fir[ iphase + (FIR_PHASES*fi) ]*fir_buffer_left[(fir_index-fi)&(FIR_SIZE-1)];
-            out_right+=low_pass_fir[ iphase + (FIR_PHASES*fi) ]*fir_buffer_right[(fir_index-fi)&(FIR_SIZE-1)];
+            out_left+= low_pass_fir[iphase][fi]* fir_buffer_left[(fir_index-fi)&(FIR_TAPS-1)];
+            out_right+=low_pass_fir[iphase][fi]*fir_buffer_right[(fir_index-fi)&(FIR_TAPS-1)];
           }
         }
         else 
         {
           for(int fi=0; fi<FIR_TAPS; fi++)  // fi = Filter Index
           {                                 // use bit masking to implement circular buffer
-            out_left+=low_pass_fir[ iphase + (FIR_PHASES*fi) ] * fir_buffer_left[(fir_index-fi)&(FIR_SIZE-1)];
+            out_left+=low_pass_fir[iphase][fi] * fir_buffer_left[(fir_index-fi)&(FIR_TAPS-1)];
           }
         }
 
