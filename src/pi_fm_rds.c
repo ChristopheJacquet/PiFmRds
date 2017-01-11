@@ -837,8 +837,9 @@ int main(int argc, char **argv) {
         if( (frac_multiplier>0.2) && (frac_multiplier<0.8) ) fom++; // prefer mulipliers away from integer boundaries 
 
 
-        if( divider%2 == 1 ) fom+=2; // prefer odd dividers
-                                     // odd dividers seem to have 6dB lower 2nd harmonic
+        //if( divider%2 == 1 ) fom+=2; // prefer odd dividers
+        // Even and odd dividers could have different harmonic content,
+        // but the latest measurements have shown no significant difference.
 
 
         //printf(" multiplier:%f divider:%d VCO: %4.1fMHz\n",carrier_freq*divider*xtal_freq_recip,divider,(double)carrier_freq*divider/1e6);
