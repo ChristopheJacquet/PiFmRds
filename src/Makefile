@@ -12,6 +12,9 @@ ifeq ($(UNAME), armv6l)
 else ifeq ($(UNAME), armv7l)
 	CFLAGS = $(STD_CFLAGS) -march=armv7-a -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=2
 	TARGET = pi2
+else ifeq ($(UNAME), aarch64)
+	CFLAGS = $(STD_CFLAGS) -march=armv8-a -O2 -pipe -fstack-protector-strong -fno-plt -ffast-math -DRASPI=2
+	TARGET = pi2
 else
 	CFLAGS = $(STD_CFLAGS)
 	TARGET = other
