@@ -35,9 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-
-// Fixes compile error "mailbox.c:260: undefined reference to `makedev'"
-#include <sys/sysmacros.h>
+#include <sys/sysmacros.h>    // For makedev().
 
 #include "mailbox.h"
 
