@@ -18,7 +18,7 @@ PiFmRds has been developed for experimentation only. It is not a media center, i
 
 Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-like distributions, for instance Raspbian, run `sudo apt-get install libsndfile1-dev`.
 
-Pi-FM-RDS also depends on the Linux `rpi-mailbox` driver, so you need a recent Linux kernel. The Raspbian releases from August 2015 have this.
+Pi-FM-RDS also depends on the Linux `rpi-mailbox` driver, so you need a recent Linux kernel. The Raspbian releases have this starting from August 2015.
 
 **Important.** The binaries compiled for the Raspberry Pi 1 are not compatible with the Raspberry Pi 2/3, and conversely. Always re-compile when switching models, so do not skip the `make clean` step in the instructions below!
 
@@ -31,7 +31,9 @@ make clean
 make
 ```
 
-Then you can just run:
+**Important.** If `make` reports any error, then no `pi_fm_rds` executable file is generated (and vice versa). So any error must be fixed before you can proceed to the next steps. `make` may fail if any required library is missing (see above), or it could be a bug on a specific/newer distribution. In this case, please file a bug.
+
+If `make` reports no error (i.e. the `pi_fm_rds` executable gets generated), you can then simply run:
 
 ```
 sudo ./pi_fm_rds
@@ -183,7 +185,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
-* 2015-09-05: support for the Raspberry Pi 2
+* 2015-09-05: support for the Raspberry Pi 2 and later models
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
 * 2014-08-04: bugfix (ppm now uses floats)
@@ -195,4 +197,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014-2015. Released under the GNU GPL v3.
+© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014-2019. Released under the GNU GPL v3.
