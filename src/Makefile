@@ -4,23 +4,27 @@ STD_CFLAGS = -Wall -std=gnu99 -c -g -O3
 # Enable ARM-specific options only on ARM, and compilation of the app only on ARM
 UNAME := $(shell uname -m)
 
-# Determine the hardware platform. Below, pi1 stands for the RaspberryPi 1 (the original one),
-# and pi2 stands for both the RaspberryPi 2 and 3.
+# Determine the hardware platform and set propper compilation flags
 ifeq ($(UNAME), armv6l)
 	CFLAGS = $(STD_CFLAGS) -march=armv6 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=1
-	TARGET = pi1
+	TARGET = 1
 else ifeq ($(UNAME), armv7l)
-	CFLAGS = $(STD_CFLAGS) -march=armv7-a -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=2
-	TARGET = pi2
+	RPI_VERSION := $(shell cat /proc/device-tree/model | grep -a -o "Raspberry\sPi\s[0-9]" | grep -o "[0-9]")
+	ifeq ($(shell expr $(RPI_VERSION) \>= 4), 1)
+		CFLAGS = $(STD_CFLAGS) -march=armv7-a -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=4
+	else
+		CFLAGS = $(STD_CFLAGS) -march=armv7-a -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math -DRASPI=2
+	endif
+	TARGET = 1
 else ifeq ($(UNAME), aarch64)
 	CFLAGS = $(STD_CFLAGS) -march=armv8-a -O2 -pipe -fstack-protector-strong -fno-plt -ffast-math -DRASPI=2
-	TARGET = pi2
+	TARGET = 1
 else
 	CFLAGS = $(STD_CFLAGS)
-	TARGET = other
+	TARGET = 0
 endif
 
-ifneq ($(TARGET), other)
+ifeq ($(TARGET), 1)
 
 app: rds.o waveforms.o pi_fm_rds.o fm_mpx.o control_pipe.o mailbox.o
 	$(CC) -o pi_fm_rds rds.o waveforms.o mailbox.o pi_fm_rds.o fm_mpx.o control_pipe.o -lm -lsndfile

@@ -116,11 +116,19 @@
 #define PERIPH_PHYS_BASE 0x7e000000
 #define DRAM_PHYS_BASE 0x40000000
 #define MEM_FLAG 0x0c
+#define PLLFREQ 500000000.
 #elif (RASPI)==2
 #define PERIPH_VIRT_BASE 0x3f000000
 #define PERIPH_PHYS_BASE 0x7e000000
 #define DRAM_PHYS_BASE 0xc0000000
 #define MEM_FLAG 0x04
+#define PLLFREQ 500000000.
+#elif (RASPI)==4
+#define PERIPH_VIRT_BASE 0xfe000000
+#define PERIPH_PHYS_BASE 0x7e000000
+#define DRAM_PHYS_BASE 0xc0000000
+#define MEM_FLAG 0x04
+#define PLLFREQ 750000000.
 #else
 #error Unknown Raspberry Pi version (variable RASPI)
 #endif
@@ -184,8 +192,6 @@
 #define PWMDMAC_THRSHLD        ((15<<8)|(15<<0))
 
 #define GPFSEL0            (0x00/4)
-
-#define PLLFREQ            500000000.    // PLLD is running at 500MHz
 
 // The deviation specifies how wide the signal is. Use 25.0 for WBFM
 // (broadcast radio) and about 3.5 for NBFM (walkie-talkie style radio)
@@ -392,7 +398,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     // register.
     //
     // Set the range to 2 bits. PLLD is at 500 MHz, therefore to get 228 kHz
-    // we need a divisor of 500000 / 2 / 228 = 1096.491228
+    // we need a divisor of 500000000 / 2000 / 228 = 1096.491228
     //
     // This is 1096 + 2012*2^-12 theoretically
     //
@@ -403,7 +409,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     //
     // So we use the 'ppm' parameter to compensate for the oscillator error
 
-    float divider = (500000./(2*228*(1.+ppm/1.e6)));
+    float divider = (PLLFREQ/(2000*228*(1.+ppm/1.e6)));
     uint32_t idivider = (uint32_t) divider;
     uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
     
