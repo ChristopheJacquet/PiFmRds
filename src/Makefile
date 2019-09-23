@@ -7,7 +7,7 @@ UNAME := $(shell uname -m)
 # Determine Raspberry Pi version (if 2 or greater)
 RPI_VERSION := $(shell cat /proc/device-tree/model | grep -a -o "Raspberry\sPi\s[0-9]" | grep -o "[0-9]")
 
-# Determine the hardware platform and set propper compilation flags
+# Determine the hardware platform and set proper compilation flags
 ifeq ($(UNAME), armv6l)
 	ARCH_CFLAGS = -march=armv6 -O3 -mtune=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -ffast-math
 	TARGET = 1
