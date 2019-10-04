@@ -143,6 +143,7 @@ void get_rds_group(int *buffer) {
         state++;
         if(state >= 5) state = 0;
     }
+    blocks[1] = (blocks[1] & 0xFC1F) | 0x320;// (blocks[1] & 1111110000011111) | 000000<i>11001</i>00000  11001-Country Music
     
     // Calculate the checkword for each block and emit the bits
     for(int i=0; i<GROUP_LENGTH; i++) {
