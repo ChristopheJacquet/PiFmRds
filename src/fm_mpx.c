@@ -66,6 +66,10 @@ float fir_buffer_stereo[FIR_SIZE] = {0};
 int fir_index = 0;
 int channels;
 
+float *last_buffer_val;
+float preemphasis_prewarp;
+float preemphasis_coefficient;
+
 SNDFILE *inf;
 
 
@@ -80,7 +84,7 @@ float *alloc_empty_buffer(size_t length) {
 }
 
 
-int fm_mpx_open(char *filename, size_t len) {
+int fm_mpx_open(char *filename, size_t len, float cutoff_freq, float preemphasis_corner_freq) {
     length = len;
 
     if(filename != NULL) {
@@ -114,13 +118,19 @@ int fm_mpx_open(char *filename, size_t len) {
             printf("%d channels, generating stereo multiplex.\n", channels);
         } else {
             printf("1 channel, monophonic operation.\n");
-        }
-    
+        } 
+        
+        // Create the preemphasis
+        last_buffer_val = (float*) malloc(sizeof(float)*channels);
+        for(int i=0;i<channels;i++) last_buffer_val[i] = 0;
+        
+        preemphasis_prewarp = tan(PI*preemphasis_corner_freq/in_samplerate);
+        preemphasis_coefficient = (1.0 + (1.0 - preemphasis_prewarp)/(1.0 + preemphasis_prewarp))/2.0;
+        printf("Created preemphasis with cutoff at %.1f Hz\n", preemphasis_corner_freq);
+        
     
         // Create the low-pass FIR filter
-        float cutoff_freq = 15000 * .8;
-        if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2 * .8;
-    
+        if(in_samplerate/2 < cutoff_freq) cutoff_freq = in_samplerate/2;
     
     
         low_pass_fir[FIR_HALF_SIZE-1] = 2 * cutoff_freq / 228000 /2;
@@ -181,6 +191,18 @@ int fm_mpx_get_samples(float *mpx_buffer) {
                             return -1;
                         }
                     } else {
+                        //apply preemphasis
+                        int k;
+                        int l;
+                        float tmp;
+                        for(k=0;k<audio_len;k+=channels) {
+                            for(l=0;l<channels;l++) {
+                                tmp = audio_buffer[k+l];
+                                audio_buffer[k+l] = audio_buffer[k+l] - preemphasis_coefficient*last_buffer_val[l];
+                                last_buffer_val[l] = tmp;
+                            }
+                        }
+                        
                         break;
                     }
                 }
