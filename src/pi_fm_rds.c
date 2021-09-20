@@ -126,8 +126,8 @@
 #elif (RASPI)==4
 #define PERIPH_VIRT_BASE 0xfe000000
 #define PERIPH_PHYS_BASE 0x7e000000
-#define DRAM_PHYS_BASE 0xc0000000
-#define MEM_FLAG 0x04
+#define DRAM_PHYS_BASE 0x40000000
+#define MEM_FLAG 0x0c
 #define PLLFREQ 750000000.
 #else
 #error Unknown Raspberry Pi version (variable RASPI)
