@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+
+#include "rds_strings.h"
 #include "waveforms.h"
 
 #define RT_LENGTH 64
@@ -237,17 +239,11 @@ void set_rds_pi(uint16_t pi_code) {
 }
 
 void set_rds_rt(char *rt) {
-    strncpy(rds_params.rt, rt, 64);
-    for(int i=0; i<64; i++) {
-        if(rds_params.rt[i] == 0) rds_params.rt[i] = 32;
-    }
+    fill_rds_string(rds_params.rt, rt, 64);
 }
 
 void set_rds_ps(char *ps) {
-    strncpy(rds_params.ps, ps, 8);
-    for(int i=0; i<8; i++) {
-        if(rds_params.ps[i] == 0) rds_params.ps[i] = 32;
-    }
+    fill_rds_string(rds_params.ps, ps, 8);
 }
 
 void set_rds_ta(int ta) {

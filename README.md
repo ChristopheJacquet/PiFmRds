@@ -119,6 +119,25 @@ TA OFF
 Every line must start with either `PS`, `RT` or `TA`, followed by one space character, and the desired value. Any other line format is silently ignored. `TA ON` switches the Traffic Announcement flag to *on*, any other value switches it to *off*.
 
 
+### Non-ASCII characters
+
+You can use the full range of characters supported by the RDS protocol. Pi-FM-RDS decodes
+the input strings based on the system's locale variables. As of early 2024, Raspberry Pi
+OS uses by default UTF-8 and the `LANG` variable is set to `en_GB.UTF-8`. With this setup,
+it should work out of the box.
+
+If it does not work, look at the first message that Pi-FM-RDS prints out. It should be
+something sensible, like:
+
+```
+Locale set to en_GB.UTF-8.
+```
+
+If it is not consistent with your setup, or if the locale appears to be set to `(null)`,
+then your locale variables are not set correctly and Pi-FM-RDS is incapable of working
+with non-ASCII characters.
+
+
 ## Warning and Disclaimer
 
 PiFmRds is an **experimental** program, designed **only for experimentation**. It is in no way intended to become a personal *media center* or a tool to operate a *radio station*, or even broadcast sound to one's own stereo system.

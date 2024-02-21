@@ -88,6 +88,7 @@
  * Richard Hirst <richardghirst@gmail.com>  December 2012
  */
 
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -591,6 +592,11 @@ int main(int argc, char **argv) {
         }
     }
     
+    // Set locale based on the environment variables. This is necessary to decode
+    // non-ASCII characters using mbtowc() in rds_strings.c.
+    char* locale = setlocale(LC_ALL, "");
+    printf("Locale set to %s.\n", locale);
+
     int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
     
     terminate(errcode);
