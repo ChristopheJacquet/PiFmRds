@@ -1,5 +1,7 @@
 src/waveform_*.wav
 src/pydemod
 src/test
+src/pi_fm_rds
+src/*_test
 *.o
 
