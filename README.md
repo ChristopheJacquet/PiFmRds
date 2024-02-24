@@ -6,7 +6,7 @@ Pi-FM-RDS
 
 This program generates an FM modulation, with RDS (Radio Data System) data generated in real time. It can include monophonic or stereophonic audio.
 
-It is based on the FM transmitter created by [Oliver Mattos and Oskar Weigl](http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter), and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
+It is based on the FM transmitter created by Oliver Mattos and Oskar Weigl, and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
 
 It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2, 3 and 4.
 
@@ -16,7 +16,7 @@ PiFmRds has been developed for experimentation only. It is not a media center, i
 
 ## How to use it?
 
-Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-like distributions, for instance Raspbian, run `sudo apt-get install libsndfile1-dev`.
+Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-like distributions, for instance Raspbian, run `sudo apt install libsndfile1-dev`.
 
 Pi-FM-RDS also depends on the Linux `rpi-mailbox` driver, so you need a recent Linux kernel. The Raspbian releases have this starting from August 2015.
 
@@ -75,7 +75,7 @@ The RDS standards states that the error for the 57 kHz subcarrier must be less t
 
 In practice, I found that Pi-FM-RDS works okay even without using the `-ppm` parameter. I suppose the receivers are more tolerant than stated in the RDS spec.
 
-One way to measure the ppm error is to play the `pulses.wav` file: it will play a pulse for precisely 1 second, then play a 1-second silence, and so on. Record the audio output from a radio with a good audio card. Say you sample at 44.1 kHz. Measure 10 intervals. Using [Audacity](http://audacity.sourceforge.net/) for example determine the number of samples of these 10 intervals: in the absence of clock error, it should be 441,000 samples. With my Pi, I found 441,132 samples. Therefore, my ppm error is (441132-441000)/441000 * 1e6 = 299 ppm, **assuming that my sampling device (audio card) has no clock error...**
+One way to measure the ppm error is to play the `pulses.wav` file: it will play a pulse for precisely 1 second, then play a 1-second silence, and so on. Record the audio output from a radio with a good audio card. Say you sample at 44.1 kHz. Measure 10 intervals. Using [Audacity](https://www.audacityteam.org/) for example determine the number of samples of these 10 intervals: in the absence of clock error, it should be 441,000 samples. With my Pi, I found 441,132 samples. Therefore, my ppm error is (441132-441000)/441000 * 1e6 = 299 ppm, **assuming that my sampling device (audio card) has no clock error...**
 
 
 ### Piping audio into Pi-FM-RDS
@@ -104,7 +104,11 @@ mkfifo rds_ctl
 sudo ./pi_fm_rds -ctl rds_ctl
 ```
 
-Then you can send “commands” to change PS, RT and TA:
+At this point, Pi-FM-RDS waits until another program opens the named pipe in write mode
+(for example `cat >rds_ctl` in the example below) before it starts transmitting.
+
+You can use the named pipe to send “commands” to change PS, RT and TA. For instance, in
+another terminal:
 
 ```
 cat >rds_ctl
@@ -116,7 +120,30 @@ TA OFF
 ...
 ```
 
+> [!TIP]
+> The program that opens the named pipe in write mode can be started after Pi-FM-RDS
+> (like above) or before (in which case Pi-FM-RDS does not have to wait at startup).
+
 Every line must start with either `PS`, `RT` or `TA`, followed by one space character, and the desired value. Any other line format is silently ignored. `TA ON` switches the Traffic Announcement flag to *on*, any other value switches it to *off*.
+
+
+### Non-ASCII characters
+
+You can use the full range of characters supported by the RDS protocol. Pi-FM-RDS decodes
+the input strings based on the system's locale variables. As of early 2024, Raspberry Pi
+OS uses by default UTF-8 and the `LANG` variable is set to `en_GB.UTF-8`. With this setup,
+it should work out of the box.
+
+If it does not work, look at the first message that Pi-FM-RDS prints out. It should be
+something sensible, like:
+
+```
+Locale set to en_GB.UTF-8.
+```
+
+If it is not consistent with your setup, or if the locale appears to be set to `(null)`,
+then your locale variables are not set correctly and Pi-FM-RDS is incapable of working
+with non-ASCII characters.
 
 
 ## Warning and Disclaimer
@@ -197,4 +224,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© [Christophe Jacquet](http://www.jacquet80.eu/) (F8FTK), 2014-2019. Released under the GNU GPL v3.
+© [Christophe Jacquet](https://jacquet.xyz/en/) (F8FTK), 2014-2024. Released under the GNU GPL v3.
