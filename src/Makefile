@@ -31,13 +31,13 @@ CFLAGS = $(STD_CFLAGS) $(ARCH_CFLAGS) -DRASPI=$(TARGET)
 ifneq ($(TARGET), other)
 
 app: rds.o waveforms.o pi_fm_rds.o rds_strings.o fm_mpx.o control_pipe.o mailbox.o
-	$(CC) -o pi_fm_rds rds.o rds_strings.o waveforms.o mailbox.o pi_fm_rds.o fm_mpx.o control_pipe.o -lm -lsndfile
+	$(CC) -o pi_fm_rds rds.o rds_strings.o waveforms.o mailbox.o pi_fm_rds.o fm_mpx.o control_pipe.o -lsndfile -lm
 
 endif
 
 
 rds_wav: rds.o rds_strings.o waveforms.o rds_wav.o fm_mpx.o
-	$(CC) -o rds_wav rds_wav.o rds.o rds_strings.o waveforms.o fm_mpx.o -lm -lsndfile
+	$(CC) -o rds_wav rds_wav.o rds.o rds_strings.o waveforms.o fm_mpx.o -lsndfile -lm
 
 rds_strings.o: rds_strings.c rds_strings.h
 	$(CC) $(CFLAGS) rds_strings.c
