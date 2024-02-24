@@ -104,7 +104,11 @@ mkfifo rds_ctl
 sudo ./pi_fm_rds -ctl rds_ctl
 ```
 
-Then you can send “commands” to change PS, RT and TA:
+At this point, Pi-FM-RDS waits until another program opens the named pipe in write mode
+(for example `cat >rds_ctl` in the example below) before it starts transmitting.
+
+You can use the named pipe to send “commands” to change PS, RT and TA. For instance, in
+another terminal:
 
 ```
 cat >rds_ctl
@@ -115,6 +119,10 @@ PS OtherTxt
 TA OFF
 ...
 ```
+
+> [!TIP]
+> The program that opens the named pipe in write mode can be started after Pi-FM-RDS
+> (like above) or before (in which case Pi-FM-RDS does not have to wait at startup).
 
 Every line must start with either `PS`, `RT` or `TA`, followed by one space character, and the desired value. Any other line format is silently ignored. `TA ON` switches the Traffic Announcement flag to *on*, any other value switches it to *off*.
 

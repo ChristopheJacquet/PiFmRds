@@ -6,7 +6,7 @@
  *
  * See https://github.com/ChristopheJacquet/PiFmRds
  *
- * PI-FM-RDS: RaspberryPi FM transmitter, with RDS. 
+ * PI-FM-RDS: RaspberryPi FM transmitter, with RDS.
  *
  * This file contains the VHF FM modulator. All credit goes to the original
  * authors, Oliver Mattos and Oskar Weigl for the original idea, and to
@@ -34,7 +34,7 @@
  * http://www.icrobotics.co.uk/wiki/index.php/Turning_the_Raspberry_Pi_Into_an_FM_Transmitter
  *
  * All credit to Oliver Mattos and Oskar Weigl for creating the original code.
- * 
+ *
  * I have taken their idea and reworked it to use the Pi DMA engine, so
  * reducing the CPU overhead for playing a .wav file from 100% to about 1.6%.
  *
@@ -213,7 +213,7 @@ static struct {
     unsigned bus_addr;    /* From mem_lock() */
     uint8_t *virt_addr;    /* From mapmem() */
 } mbox;
-    
+
 
 
 static volatile uint32_t *pwm_reg;
@@ -256,7 +256,7 @@ terminate(int num)
         dma_reg[DMA_CS] = BCM2708_DMA_RESET;
         udelay(10);
     }
-    
+
     fm_mpx_close();
     close_control_pipe();
 
@@ -267,7 +267,7 @@ terminate(int num)
     }
 
     printf("Terminating: cleanly deactivated the DMA engine and killed the carrier.\n");
-    
+
     exit(num);
 }
 
@@ -328,7 +328,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         sa.sa_handler = terminate;
         sigaction(i, &sa, NULL);
     }
-        
+
     dma_reg = map_peripheral(DMA_VIRT_BASE, DMA_LEN);
     pwm_reg = map_peripheral(PWM_VIRT_BASE, PWM_LEN);
     clk_reg = map_peripheral(CLK_VIRT_BASE, CLK_LEN);
@@ -352,7 +352,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         fatal("Could not map memory.\n");
     }
     printf("virt_addr = %p\n", mbox.virt_addr);
-    
+
 
     // GPIO4 needs to be ALT FUNC 0 to output the clock
     gpio_reg[GPFSEL0] = (gpio_reg[GPFSEL0] & ~(7 << 12)) | (4 << 12);
@@ -395,7 +395,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     cbp--;
     cbp->next = mem_virt_to_phys(mbox.virt_addr);
 
-    // Here we define the rate at which we want to update the GPCLK control 
+    // Here we define the rate at which we want to update the GPCLK control
     // register.
     //
     // Set the range to 2 bits. PLLD is at 500 MHz, therefore to get 228 kHz
@@ -405,7 +405,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     //
     // However the fractional part may have to be adjusted to take the actual
     // frequency of your Pi's oscillator into account. For example on my Pi,
-    // the fractional part should be 1916 instead of 2012 to get exactly 
+    // the fractional part should be 1916 instead of 2012 to get exactly
     // 228 kHz. However RDS decoding is still okay even at 2012.
     //
     // So we use the 'ppm' parameter to compensate for the oscillator error
@@ -413,8 +413,8 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     float divider = (PLLFREQ/(2000*228*(1.+ppm/1.e6)));
     uint32_t idivider = (uint32_t) divider;
     uint32_t fdivider = (uint32_t) ((divider - idivider)*pow(2, 12));
-    
-    printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912].\n", 
+
+    printf("ppm corr is %.4f, divider is %.4f (%d + %d*2^-12) [nominal 1096.4912].\n",
                 ppm, divider, idivider, fdivider);
 
     pwm_reg[PWM_CTL] = 0;
@@ -434,7 +434,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     udelay(10);
     pwm_reg[PWM_CTL] = PWMCTL_USEF1 | PWMCTL_PWEN1;
     udelay(10);
-    
+
 
     // Initialise the DMA
     dma_reg[DMA_CS] = BCM2708_DMA_RESET;
@@ -444,7 +444,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     dma_reg[DMA_DEBUG] = 7; // clear debug error flags
     dma_reg[DMA_CS] = 0x10880001;    // go, mid priority, wait for outstanding writes
 
-    
+
     uint32_t last_cb = (uint32_t)ctl->cb;
 
     // Data structures for baseband data
@@ -454,7 +454,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 
     // Initialize the baseband generator
     if(fm_mpx_open(audio_file, DATA_SIZE) < 0) return 1;
-    
+
     // Initialize the RDS modulator
     char myps[9] = {0};
     set_rds_pi(pi);
@@ -462,7 +462,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     uint16_t count = 0;
     uint16_t count2 = 0;
     int varying_ps = 0;
-    
+
     if(ps) {
         set_rds_ps(ps);
         printf("PI: %04X, PS: \"%s\".\n", pi, ps);
@@ -471,9 +471,11 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         varying_ps = 1;
     }
     printf("RT: \"%s\"\n", rt);
-    
+
     // Initialize the control pipe reader
     if(control_pipe) {
+        printf("Waiting for control pipe `%s` to be opened by the writer, e.g. "
+               "by running `cat >%s`.\n", control_pipe, control_pipe);
         if(open_control_pipe(control_pipe) == 0) {
             printf("Reading control commands on %s.\n", control_pipe);
         } else {
@@ -481,8 +483,8 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
             control_pipe = NULL;
         }
     }
-    
-    
+
+
     printf("Starting to transmit on %3.1f MHz.\n", carrier_freq/1e6);
 
     for (;;) {
@@ -499,11 +501,11 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
             }
             count++;
         }
-        
+
         if(control_pipe && poll_control_pipe() == CONTROL_PIPE_PS_SET) {
             varying_ps = 0;
         }
-        
+
         usleep(5000);
 
         uint32_t cur_cb = mem_phys_to_virt(dma_reg[DMA_CONBLK_AD]);
@@ -523,7 +525,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
                 data_len = DATA_SIZE;
                 data_index = 0;
             }
-            
+
             float dval = data[data_index] * (DEVIATION / 10.);
             data_index++;
             data_len--;
@@ -553,15 +555,15 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
-    
-    
+
+
     // Parse command-line arguments
     for(int i=1; i<argc; i++) {
         char *arg = argv[i];
         char *param = NULL;
-        
+
         if(arg[0] == '-' && i+1 < argc) param = argv[i+1];
-        
+
         if((strcmp("-wav", arg)==0 || strcmp("-audio", arg)==0) && param != NULL) {
             i++;
             audio_file = param;
@@ -591,13 +593,13 @@ int main(int argc, char **argv) {
             "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
         }
     }
-    
+
     // Set locale based on the environment variables. This is necessary to decode
     // non-ASCII characters using mbtowc() in rds_strings.c.
     char* locale = setlocale(LC_ALL, "");
     printf("Locale set to %s.\n", locale);
 
     int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
-    
+
     terminate(errcode);
 }
