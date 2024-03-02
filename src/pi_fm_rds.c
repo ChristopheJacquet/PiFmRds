@@ -282,18 +282,18 @@ fatal(char *fmt, ...)
     terminate(0);
 }
 
-static uint32_t
+static size_t
 mem_virt_to_phys(void *virt)
 {
-    uint32_t offset = (uint8_t *)virt - mbox.virt_addr;
+    size_t offset = (size_t)virt - (size_t)mbox.virt_addr;
 
     return mbox.bus_addr + offset;
 }
 
-static uint32_t
-mem_phys_to_virt(uint32_t phys)
+static size_t
+mem_phys_to_virt(size_t phys)
 {
-    return phys - (uint32_t)mbox.bus_addr + (uint32_t)mbox.virt_addr;
+    return (size_t) (phys - mbox.bus_addr + mbox.virt_addr);
 }
 
 static void *
@@ -338,7 +338,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     mbox.handle = mbox_open();
     if (mbox.handle < 0)
         fatal("Failed to open mailbox. Check kernel support for vcio / BCM2708 mailbox.\n");
-    printf("Allocating physical memory: size = %d     ", NUM_PAGES * 4096);
+    printf("Allocating physical memory: size = %zu     ", NUM_PAGES * 4096);
     if(! (mbox.mem_ref = mem_alloc(mbox.handle, NUM_PAGES * 4096, 4096, MEM_FLAG))) {
         fatal("Could not allocate memory.\n");
     }
@@ -445,7 +445,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     dma_reg[DMA_CS] = 0x10880001;    // go, mid priority, wait for outstanding writes
 
 
-    uint32_t last_cb = (uint32_t)ctl->cb;
+    size_t last_cb = (size_t)ctl->cb;
 
     // Data structures for baseband data
     float data[DATA_SIZE];
@@ -508,9 +508,9 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 
         usleep(5000);
 
-        uint32_t cur_cb = mem_phys_to_virt(dma_reg[DMA_CONBLK_AD]);
-        int last_sample = (last_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
-        int this_sample = (cur_cb - (uint32_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
+        size_t cur_cb = mem_phys_to_virt(dma_reg[DMA_CONBLK_AD]);
+        int last_sample = (last_cb - (size_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
+        int this_sample = (cur_cb - (size_t)mbox.virt_addr) / (sizeof(dma_cb_t) * 2);
         int free_slots = this_sample - last_sample;
 
         if (free_slots < 0)
@@ -540,7 +540,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
 
             free_slots -= SUBSIZE;
         }
-        last_cb = (uint32_t)mbox.virt_addr + last_sample * sizeof(dma_cb_t) * 2;
+        last_cb = (size_t)(mbox.virt_addr + last_sample * sizeof(dma_cb_t) * 2);
     }
 
     return 0;
