@@ -5,7 +5,7 @@ STD_CFLAGS = -Wall -std=gnu99 -c -g
 UNAME := $(shell uname -m)
 
 # Determine Raspberry Pi version (if 2 or greater)
-RPI_VERSION := $(shell cat /proc/device-tree/model | grep -a -o "Raspberry\sPi\s[0-9]" | grep -o "[0-9]")
+RPI_VERSION := $(shell if [ -e /proc/device-tree/model ]; then cat /proc/device-tree/model | grep -a -o "Raspberry\sPi\s[0-9]" | grep -o "[0-9]"; else echo 4; fi)
 
 # Determine the hardware platform and set proper compilation flags
 ifeq ($(UNAME), armv6l)
