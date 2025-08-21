@@ -159,7 +159,7 @@ int fm_mpx_open(char *filename, size_t len) {
 
 // samples provided by this function are in 0..10: they need to be divided by
 // 10 after.
-int fm_mpx_get_samples(float *mpx_buffer) {
+int fm_mpx_get_samples(float *mpx_buffer, uint8_t no_loop) {
     get_rds_samples(mpx_buffer, length);
 
     if(inf  == NULL) return 0; // if there is no audio, stop here
@@ -176,10 +176,15 @@ int fm_mpx_get_samples(float *mpx_buffer) {
                         return -1;
                     }
                     if(audio_len == 0) {
-                        if( sf_seek(inf, 0, SEEK_SET) < 0 ) {
-                            fprintf(stderr, "Could not rewind in audio file, terminating\n");
-                            return -1;
-                        }
+			if (no_loop) {
+				fprintf(stderr, "End of file reached, stopping.\n");
+				return -1;
+			} else {
+                        	if( sf_seek(inf, 0, SEEK_SET) < 0 ) {
+	                            fprintf(stderr, "Could not rewind in audio file, terminating\n");
+        	                    return -1;
+                        	}
+			}
                     } else {
                         break;
                     }

@@ -144,7 +144,6 @@
 #define BCM2708_DMA_END            (1<<1)
 #define BCM2708_DMA_RESET        (1<<31)
 #define BCM2708_DMA_INT            (1<<2)
-
 #define DMA_CS            (0x00/4)
 #define DMA_CONBLK_AD        (0x04/4)
 #define DMA_DEBUG        (0x20/4)
@@ -318,7 +317,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe, uint8_t no_loop) {
     // Catch all signals possible - it is vital we kill the DMA engine
     // on process exit!
     for (int i = 0; i < 64; i++) {
@@ -519,7 +518,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         while (free_slots >= SUBSIZE) {
             // get more baseband samples if necessary
             if(data_len == 0) {
-                if( fm_mpx_get_samples(data) < 0 ) {
+                if( fm_mpx_get_samples(data, no_loop) < 0 ) {
                     terminate(0);
                 }
                 data_len = DATA_SIZE;
@@ -555,6 +554,7 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+    uint8_t no_loop = 0;
 
 
     // Parse command-line arguments
@@ -587,10 +587,13 @@ int main(int argc, char **argv) {
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
-        } else {
+        } else if(strcmp("-no-loop", arg)==0 && param == NULL) {
+	    i++;
+            no_loop = 1;
+	} else {
             fatal("Unrecognised argument: %s.\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
-            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
+            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe] [-no-loop]\n", arg);
         }
     }
 
@@ -599,7 +602,7 @@ int main(int argc, char **argv) {
     char* locale = setlocale(LC_ALL, "");
     printf("Locale set to %s.\n", locale);
 
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe, no_loop);
 
     terminate(errcode);
 }
