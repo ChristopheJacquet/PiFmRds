@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 
 #   PiFmRds - FM/RDS transmitter for the Raspberry Pi
@@ -70,7 +70,7 @@ def generate_bit(name):
     
     outc.write(u"float waveform_{name}[] = {{{values}}};\n\n".format(
         name = name,
-        values = u", ".join(map(unicode, out/2.5))))
+        values = u", ".join(map(str, out/2.5))))
         # note: need to limit the amplitude so as not to saturate when the biphase
         # waveforms are summed
     
