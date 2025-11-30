@@ -150,6 +150,11 @@ then your locale variables are not set correctly and Pi-FM-RDS is incapable of w
 with non-ASCII characters.
 
 
+### Compiling on distributions with different float ABIs
+
+The makefile uses `-mfloat-abi=hard`, which is suited for Raspberry Pi OS. Different distributions might require different values, namely `soft` or `softfp`.
+
+
 ## Warning and Disclaimer
 
 PiFmRds is an **experimental** program, designed **only for experimentation**. It is in no way intended to become a personal *media center* or a tool to operate a *radio station*, or even broadcast sound to one's own stereo system.
@@ -211,7 +216,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ### References
 
-* [EN 50067, Specification of the radio data system (RDS) for VHF/FM sound broadcasting in the frequency range 87.5 to 108.0 MHz](http://www.interactive-radio-system.com/docs/EN50067_RDS_Standard.pdf)
+* EN 50067, Specification of the radio data system (RDS) for VHF/FM sound broadcasting in the frequency range 87.5 to 108.0 MHz.
 
 
 ## History
@@ -229,4 +234,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© [Christophe Jacquet](https://jacquet.xyz/en/) (F8FTK), 2014-2024. Released under the GNU GPL v3.
+© [Christophe Jacquet](https://jacquet.xyz/en/) (F8FTK), 2014-2025. Released under the GNU GPL v3.
