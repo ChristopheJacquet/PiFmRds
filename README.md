@@ -8,7 +8,7 @@ This program generates an FM modulation, with RDS (Radio Data System) data gener
 
 It is based on the FM transmitter created by Oliver Mattos and Oskar Weigl, and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
 
-It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2, 3 and 4.
+It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2, 3, 4 and Zero.
 
 ![](doc/vfd_display.jpg)
 
@@ -16,15 +16,19 @@ PiFmRds has been developed for experimentation only. It is not a media center, i
 
 ## How to use it?
 
-Pi-FM-RDS, depends on the `sndfile` library. To install this library on Debian-like distributions, for instance Raspbian, run `sudo apt install libsndfile1-dev`.
+Pi-FM-RDS is tested under Raspberry Pi OS Lite (the version without desktop environment). You should be able to run it under other distributions, but the author provides no guarantees nor support. Latest Raspberry Pi OS version successfully tested: 13.1 (based on Debian Trixie).
 
-Pi-FM-RDS also depends on the Linux `rpi-mailbox` driver, so you need a recent Linux kernel. The Raspbian releases have this starting from August 2015.
+Dependencies:
 
-**Important.** The binaries compiled for the Raspberry Pi 1 are not compatible with the Raspberry Pi 2/3, and conversely. Always re-compile when switching models, so do not skip the `make clean` step in the instructions below!
+* `sndfile` library, provided by package `libsndfile1-dev` under Raspberry Pi OS and other Debian-like distributions.
+* Linux `rpi-mailbox` driver, so you need a Linux kernel built after approximately August 2015.
 
-Clone the source repository and run `make` in the `src` directory:
+**Important.** The binaries compiled for one Raspberry Pi model and ARM architecture are not compatible with other models and architectures. Always re-compile when switching models, so do not skip the `make clean` step in the instructions below!
+
+These should be the complete instructions assuming a clean Raspberry Pi OS Lite install:
 
 ```bash
+sudo apt install git libsndfile1-dev
 git clone https://github.com/ChristopheJacquet/PiFmRds.git
 cd PiFmRds/src
 make clean
@@ -212,6 +216,7 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2024-02-21: properly handle non-ASCII characters.
 * 2015-09-05: support for the Raspberry Pi 2 and later models
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
