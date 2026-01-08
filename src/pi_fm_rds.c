@@ -318,7 +318,7 @@ map_peripheral(uint32_t base, uint32_t len)
 #define DATA_SIZE 5000
 
 
-int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, float ppm, char *control_pipe) {
+int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt, int ta, float ppm, char *control_pipe) {
     // Catch all signals possible - it is vital we kill the DMA engine
     // on process exit!
     for (int i = 0; i < 64; i++) {
@@ -459,6 +459,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
     char myps[9] = {0};
     set_rds_pi(pi);
     set_rds_rt(rt);
+    set_rds_ta(ta);
     uint16_t count = 0;
     uint16_t count2 = 0;
     int varying_ps = 0;
@@ -471,6 +472,7 @@ int tx(uint32_t carrier_freq, char *audio_file, uint16_t pi, char *ps, char *rt,
         varying_ps = 1;
     }
     printf("RT: \"%s\"\n", rt);
+    printf("TA: %s\n", ta ? "ON" : "OFF");
 
     // Initialize the control pipe reader
     if(control_pipe) {
@@ -555,6 +557,7 @@ int main(int argc, char **argv) {
     char *rt = "PiFmRds: live FM-RDS transmission from the RaspberryPi";
     uint16_t pi = 0x1234;
     float ppm = 0;
+    int ta = 0;
 
 
     // Parse command-line arguments
@@ -587,10 +590,19 @@ int main(int argc, char **argv) {
         } else if(strcmp("-ctl", arg)==0 && param != NULL) {
             i++;
             control_pipe = param;
+        } else if(strcmp("-ta", arg)==0 && param != NULL) {
+            i++;
+            if (strcmp("on", param) == 0) {
+                ta = 1;
+            } else if (strcmp("off", param) == 0) {
+                ta = 0;
+            } else {
+                fatal("Invalid parameter after `-ta` -- expected `on` or `off`, got `%s`.\n", param);
+            }
         } else {
             fatal("Unrecognised argument: %s.\n"
             "Syntax: pi_fm_rds [-freq freq] [-audio file] [-ppm ppm_error] [-pi pi_code]\n"
-            "                  [-ps ps_text] [-rt rt_text] [-ctl control_pipe]\n", arg);
+            "                  [-ps ps_text] [-rt rt_text] [-ta (on|off)] [-ctl control_pipe]\n", arg);
         }
     }
 
@@ -599,7 +611,7 @@ int main(int argc, char **argv) {
     char* locale = setlocale(LC_ALL, "");
     printf("Locale set to %s.\n", locale);
 
-    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ppm, control_pipe);
+    int errcode = tx(carrier_freq, audio_file, pi, ps, rt, ta, ppm, control_pipe);
 
     terminate(errcode);
 }
