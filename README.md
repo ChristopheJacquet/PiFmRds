@@ -90,12 +90,16 @@ If you use the argument `-audio -`, Pi-FM-RDS reads audio data on standard input
 sox -t mp3 http://www.linuxvoice.com/episodes/lv_s02e01.mp3 -t wav -  | sudo ./pi_fm_rds -audio -
 ```
 
-Or to pipe the AUX input of a sound card into Pi-FM-RDS:
+Pipe the AUX input of a sound card into Pi-FM-RDS:
 
 ```
 sudo arecord -fS16_LE -r 44100 -Dplughw:1,0 -c 2 -  | sudo ./pi_fm_rds -audio -
 ```
 
+Pipe live MP3 file into Pi-FM-RDS (IceCast or SHOUTCast supported):
+```
+sox -t mp3 http://link-to-icecast-instance.tld/radio.mp3 -t wav -  | sudo ./pi_fm_rds -ps ICECAST -rt Icecast test -audio -
+```
 
 ### Changing PS, RT and TA at run-time
 
