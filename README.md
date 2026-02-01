@@ -8,7 +8,7 @@ This program generates an FM modulation, with RDS (Radio Data System) data gener
 
 It is based on the FM transmitter created by Oliver Mattos and Oskar Weigl, and later adapted to using DMA by [Richard Hirst](https://github.com/richardghirst). Christophe Jacquet adapted it and added the RDS data generator and modulator. The transmitter uses the Raspberry Pi's PWM generator to produce VHF signals.
 
-It is compatible with both the Raspberry Pi 1 (the original one) and the Raspberry Pi 2, 3 and 4.
+It has been verified to be compatible with Raspberry Pi models 1, 2, 3, 4, Zero and Zero 2.
 
 ![](doc/vfd_display.jpg)
 
@@ -212,6 +212,8 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 ## History
 
+* 2026-02-01: add support for Raspberry Pi Zero and Zero 2.
+* 2024-02-21: properly support non-ASCII characters.
 * 2015-09-05: support for the Raspberry Pi 2 and later models
 * 2014-11-01: support for toggling the Traffic Announcement (TA) flag at run-time
 * 2014-10-19: bugfix (cleanly stop the DMA engine when the specified file does not exist, or it's not possible to read from stdin)
@@ -224,4 +226,4 @@ The samples are played by `pi_fm_rds.c` that is adapted from Richard Hirst's [Pi
 
 --------
 
-© [Christophe Jacquet](https://jacquet.xyz/en/) (F8FTK), 2014-2024. Released under the GNU GPL v3.
+© [Christophe Jacquet](https://jacquet.xyz/en/), 2014-2026. Released under the GNU GPL v3.

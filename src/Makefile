@@ -5,7 +5,18 @@ STD_CFLAGS = -Wall -std=gnu99 -c -g
 UNAME := $(shell uname -m)
 
 # Determine Raspberry Pi version (if 2 or greater)
+RPI_MODEL := $(shell cat /proc/device-tree/model)
 RPI_VERSION := $(shell cat /proc/device-tree/model | grep -a -o "Raspberry\sPi\s[0-9]" | grep -o "[0-9]")
+
+ifeq ($(findstring Raspberry Pi Zero 2,$(RPI_MODEL)),Raspberry Pi Zero 2)
+	# Treat Raspberry Pi Zero 2 as model 3.
+	RPI_VERSION := 3
+else ifeq ($(findstring Raspberry Pi Zero,$(RPI_MODEL)),Raspberry Pi Zero)
+	# Treat Raspberry Pi Zero as model 1.
+	RPI_VERSION := 1
+endif
+
+$(info RPI_VERSION = $(RPI_VERSION))
 
 # Determine the hardware platform and set proper compilation flags
 ifeq ($(UNAME), armv6l)
