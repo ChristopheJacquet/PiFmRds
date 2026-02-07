@@ -86,13 +86,13 @@ int main(int argc, char **argv) {
         }
 
         if(sf_write_float(outf, mpx_buffer, LENGTH) != LENGTH) {
-            fprintf(stderr, "Error: writing to file %s.\n", argv[1]);
+            fprintf(stderr, "Error: writing to file %s.\n", argv[2]);
             return EXIT_FAILURE;
         }
     }
     
     if(sf_close(outf) ) {
-        fprintf(stderr, "Error: closing file %s.\n", argv[1]);
+        fprintf(stderr, "Error: closing file %s.\n", argv[2]);
     }
     
     fm_mpx_close();
